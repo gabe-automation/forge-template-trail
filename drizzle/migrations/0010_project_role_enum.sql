@@ -1,0 +1,1 @@
+do $$ begin create type public.project_role as enum ('owner','editor','viewer'); exception when duplicate_object then null; end $$;

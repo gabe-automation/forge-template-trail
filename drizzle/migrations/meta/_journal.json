@@ -71,6 +71,13 @@
       "when": 1792299692560,
       "tag": "0009_noop_check",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793062675770,
+      "tag": "0010_project_role_enum",
+      "breakpoints": true
     }
   ]
 }
