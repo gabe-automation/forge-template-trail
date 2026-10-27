@@ -10,33 +10,134 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
+import { Route as SiteProjectIdRouteImport } from './routes/site.$projectId'
+import { Route as AuthenticatedPProjectIdRouteImport } from './routes/_authenticated/p.$projectId'
+import { Route as MediaProjectIdFileRouteImport } from './routes/media.$projectId.$file'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const SiteProjectIdRoute = SiteProjectIdRouteImport.update({
+  id: '/site/$projectId',
+  path: '/site/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedPProjectIdRoute = AuthenticatedPProjectIdRouteImport.update({
+  id: '/p/$projectId',
+  path: '/p/$projectId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const MediaProjectIdFileRoute = MediaProjectIdFileRouteImport.update({
+  id: '/media/$projectId/$file',
+  path: '/media/$projectId/$file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/terms': typeof TermsRoute
+  '/projects': typeof AuthenticatedProjectsRoute
+  '/site/$projectId': typeof SiteProjectIdRoute
+  '/p/$projectId': typeof AuthenticatedPProjectIdRoute
+  '/media/$projectId/$file': typeof MediaProjectIdFileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/terms': typeof TermsRoute
+  '/projects': typeof AuthenticatedProjectsRoute
+  '/site/$projectId': typeof SiteProjectIdRoute
+  '/p/$projectId': typeof AuthenticatedPProjectIdRoute
+  '/media/$projectId/$file': typeof MediaProjectIdFileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/about': typeof AboutRoute
+  '/auth': typeof AuthRoute
+  '/terms': typeof TermsRoute
+  '/_authenticated/projects': typeof AuthenticatedProjectsRoute
+  '/site/$projectId': typeof SiteProjectIdRoute
+  '/_authenticated/p/$projectId': typeof AuthenticatedPProjectIdRoute
+  '/media/$projectId/$file': typeof MediaProjectIdFileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/terms'
+    | '/projects'
+    | '/site/$projectId'
+    | '/p/$projectId'
+    | '/media/$projectId/$file'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/terms'
+    | '/projects'
+    | '/site/$projectId'
+    | '/p/$projectId'
+    | '/media/$projectId/$file'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/about'
+    | '/auth'
+    | '/terms'
+    | '/_authenticated/projects'
+    | '/site/$projectId'
+    | '/_authenticated/p/$projectId'
+    | '/media/$projectId/$file'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
+  AuthRoute: typeof AuthRoute
+  TermsRoute: typeof TermsRoute
+  SiteProjectIdRoute: typeof SiteProjectIdRoute
+  MediaProjectIdFileRoute: typeof MediaProjectIdFileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +149,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/site/$projectId': {
+      id: '/site/$projectId'
+      path: '/site/$projectId'
+      fullPath: '/site/$projectId'
+      preLoaderRoute: typeof SiteProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/p/$projectId': {
+      id: '/_authenticated/p/$projectId'
+      path: '/p/$projectId'
+      fullPath: '/p/$projectId'
+      preLoaderRoute: typeof AuthenticatedPProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/media/$projectId/$file': {
+      id: '/media/$projectId/$file'
+      path: '/media/$projectId/$file'
+      fullPath: '/media/$projectId/$file'
+      preLoaderRoute: typeof MediaProjectIdFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
+  AuthenticatedPProjectIdRoute: typeof AuthenticatedPProjectIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
+  AuthenticatedPProjectIdRoute: AuthenticatedPProjectIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
+  AuthRoute: AuthRoute,
+  TermsRoute: TermsRoute,
+  SiteProjectIdRoute: SiteProjectIdRoute,
+  MediaProjectIdFileRoute: MediaProjectIdFileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

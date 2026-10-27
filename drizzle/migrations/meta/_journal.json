@@ -1,0 +1,76 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790259925470,
+      "tag": "0000_webcraft_core",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790496680906,
+      "tag": "0001_realtime_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790582362428,
+      "tag": "0002_node_locks",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790687431549,
+      "tag": "0003_published_sites",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790735883108,
+      "tag": "0004_published_site_pages",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791698573677,
+      "tag": "0005_apply_webcraft_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791698603782,
+      "tag": "0006_pages_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791698663382,
+      "tag": "0007_chat_messages_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792036043985,
+      "tag": "0008_site_media_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792299692560,
+      "tag": "0009_noop_check",
+      "breakpoints": true
+    }
+  ]
+}
