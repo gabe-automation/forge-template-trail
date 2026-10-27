@@ -25,7 +25,7 @@ async function inlineMedia(html: string): Promise<string> {
     try { const u = new URL(raw, origin); if (u.origin === origin && /^\/(images|assets|media|src)\//.test(u.pathname)) urls.add(raw); } catch { /* skip */ }
   }
   let out = html;
-  await Promise.all([...urls].map(async (raw) => {
+  await Promise.all([...urls].sort((a, b) => b.length - a.length).map(async (raw) => {
     try {
       const res = await fetch(new URL(raw, origin).href, { credentials: "include" });
       if (!res.ok) return;
