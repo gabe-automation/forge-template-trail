@@ -421,16 +421,23 @@ function EditorPage() {
     };
 
     const base = views.reduce((m, v) => Math.max(m, v.geo.desktop.y + v.geo.desktop.h), 0) + (views.length ? 48 : 0);
-    await applyBlocks(t.blocks, page.id, base);
-    if (!views.length) await saveTheme(t.theme);
     // A template is a real website: its extra pages are created as proper project pages.
+    const created: { id: string; title: string; blocks: TplBlock[] }[] = [];
     for (const tp of t.pages ?? []) {
       const sort = keyBetween(lastSort, null);
       lastSort = sort;
       const { data: np, error } = await supabase.from("pages").insert({ project_id: projectId, kind: "canvas", title: tp.title, sort }).select("id").single();
       if (error || !np) { failed.v = true; continue; }
-      await applyBlocks(tp.blocks, np.id, 0);
+      created.push({ id: np.id, title: tp.title, blocks: tp.blocks });
     }
+    // Every page's menu links to every page, so visitors can move around the site.
+    const menu = [{ id: page.id, title: "Home" }, ...created];
+    const withMenu = (blocks: TplBlock[]) => created.length ? blocks.map((b) => b.type === "navbar"
+      ? { ...b, sub: menu.map((m) => m.title).join(" · "), attrs: { ...(b.attrs ?? {}), "data-links": menu.map((m) => `?page=${m.id}`).join("|") } }
+      : b) : blocks;
+    await applyBlocks(withMenu(t.blocks), page.id, base);
+    if (!views.length) await saveTheme(t.theme);
+    for (const c of created) await applyBlocks(withMenu(c.blocks), c.id, 0);
     await qc.invalidateQueries({ queryKey: ["pages", projectId] });
     const pageCount = templatePageCount(t);
     if (failed.v) toast.error("Some template blocks could not be added");
