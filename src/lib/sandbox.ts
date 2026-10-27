@@ -4,14 +4,37 @@ import { esc } from "./blocks";
 export function openSandboxed(html: string, title = "Preview"): boolean {
   const w = window.open("", "_blank");
   if (!w) return false;
-  // The site runs inside a srcdoc frame (about:srcdoc), where root-relative URLs would
-  // otherwise have nothing to resolve against — a <base> keeps every image, style and
-  // link loading from the site's own origin.
-  const withBase = /<base\s/i.test(html) ? html : html.replace(/<head([^>]*)>/i, `<head$1><base href="${window.location.origin}/">`);
-  w.document.open();
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%;display:block}</style></head><body><iframe sandbox="allow-scripts allow-forms allow-popups allow-modals" srcdoc="${esc(withBase)}"></iframe></body></html>`);
-  w.document.close();
+  w.document.write("<p style=\"font:14px system-ui;padding:2rem\">Loading preview…</p>");
+  // The sandboxed frame has no cookies, so same-site photos (which sit behind the
+  // preview's sign-in) answer 401 there. Download them here and embed them inline.
+  void inlineMedia(html).then((inlined) => {
+    const withBase = /<base\s/i.test(inlined) ? inlined : inlined.replace(/<head([^>]*)>/i, `<head$1><base href="${window.location.origin}/">`);
+    w.document.open();
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>html,body{margin:0;height:100%}iframe{border:0;width:100%;height:100%;display:block}</style></head><body><iframe sandbox="allow-scripts allow-forms allow-popups allow-modals" srcdoc="${esc(withBase)}"></iframe></body></html>`);
+    w.document.close();
+  });
   return true;
+}
+
+async function inlineMedia(html: string): Promise<string> {
+  const origin = window.location.origin;
+  const urls = new Set<string>();
+  for (const m of html.matchAll(/(?:src|poster)=\\?"([^"\\]+)\\?"|url\(\s*['"]?([^'")]+)['"]?\s*\)/gi)) {
+    const raw = m[1] ?? m[2];
+    if (!raw || raw.startsWith("data:")) continue;
+    try { const u = new URL(raw, origin); if (u.origin === origin && /^\/(images|assets|media|src)\//.test(u.pathname)) urls.add(raw); } catch { /* skip */ }
+  }
+  let out = html;
+  await Promise.all([...urls].map(async (raw) => {
+    try {
+      const res = await fetch(new URL(raw, origin).href, { credentials: "include" });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const data = await new Promise<string>((r) => { const fr = new FileReader(); fr.onload = () => r(String(fr.result)); fr.readAsDataURL(blob); });
+      out = out.split(raw).join(data);
+    } catch { /* keep original */ }
+  }));
+  return out;
 }
 
 const toB64 = (buf: ArrayBuffer) => {
