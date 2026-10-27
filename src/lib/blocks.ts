@@ -147,7 +147,7 @@ export function blockHtml(type: BlockType, c: BlockContent, id: string): string 
     case "navbar":
     {
       const links = (c.attrs?.["data-links"] ?? "").split("|").map((x) => safeHref(x));
-      return `<nav class="wc-nav" aria-label="Main"><strong class="wc-brand">${t}</strong><ul>${split(c.sub).map((x, i) => links[i] ? `<li><a href="${esc(links[i]!)}">${esc(x)}</a></li>` : `<li><span>${esc(x)}</span></li>`).join("")}</ul>${action(l)}</nav>`;
+      return `<nav class="wc-nav" aria-label="Main"><strong class="wc-brand">${t}</strong><ul>${(c.sub ?? "").split(/\s*[|·]\s*/).filter(Boolean).map((x, i) => links[i] ? `<li><a href="${esc(links[i]!)}">${esc(x)}</a></li>` : `<li><span>${esc(x)}</span></li>`).join("")}</ul>${action(l)}</nav>`;
     }
     case "hero":
     {
