@@ -79,7 +79,6 @@ function Projects() {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const filtered = (projects ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-  const featured = filtered[0];
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -101,7 +100,7 @@ function Projects() {
     onSignOut={() => supabase.auth.signOut().then(() => navigate({ to: "/" }))}>
     <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
       <h1 className="text-lg font-semibold">{section === "Projects" ? "Recents" : section}</h1>
-      {readOnly ? <span className="text-xs text-muted-foreground">View only</span> : <Button size="sm" aria-label="New project" onClick={() => { setTpl(sessionStorage.getItem("webcraft:pending-template") ?? ""); setTpl((v) => v); sessionStorage.removeItem("webcraft:pending-template"); setCreating(true); }}><Plus className="size-4"/><span className="hidden sm:inline">New design file</span></Button>}
+      {readOnly ? <span className="text-xs text-muted-foreground">View only</span> : <Button size="sm" aria-label="New project" onClick={() => { setTpl(sessionStorage.getItem("webcraft:pending-template") ?? ""); sessionStorage.removeItem("webcraft:pending-template"); setCreating(true); }}><Plus className="size-4"/><span className="hidden sm:inline">New design file</span></Button>}
     </div>
     {section === "Templates" ? <TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/>
       : <>
