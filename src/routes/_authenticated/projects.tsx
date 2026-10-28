@@ -99,20 +99,22 @@ function Projects() {
 
   return <WorkspaceShell signedIn section={section} onSection={setSection} search={search} onSearch={setSearch}
     onSignOut={() => supabase.auth.signOut().then(() => navigate({ to: "/" }))}>
-    <div className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-      <h1 className="text-3xl font-semibold">{section}</h1>
-      {readOnly ? <span className="text-xs text-muted-foreground">View only</span> : <Button aria-label="New project" onClick={() => { setTpl(sessionStorage.getItem("webcraft:pending-template") ?? ""); sessionStorage.removeItem("webcraft:pending-template"); setCreating(true); }}><Plus className="size-4"/><span className="hidden sm:inline">New project</span></Button>}
+    <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+      <h1 className="text-lg font-semibold">{section === "Projects" ? "Recents" : section}</h1>
+      {readOnly ? <span className="text-xs text-muted-foreground">View only</span> : <Button size="sm" aria-label="New project" onClick={() => { setTpl(sessionStorage.getItem("webcraft:pending-template") ?? ""); setTpl((v) => v); sessionStorage.removeItem("webcraft:pending-template"); setCreating(true); }}><Plus className="size-4"/><span className="hidden sm:inline">New design file</span></Button>}
     </div>
     {section === "Templates" ? <TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/>
       : <>
-        {isLoading && <div className="h-80 animate-pulse bg-muted"/>}
-        {featured && <Link to="/p/$projectId" params={{ projectId: featured.id }} className="group mb-10 grid overflow-hidden border bg-card transition hover:border-primary md:grid-cols-[3fr_2fr]">
-          <SitePreview nodes={thumbs?.[featured.id]?.nodes ?? []} theme={thumbs?.[featured.id]?.theme ?? DEFAULT_THEME} height={340}/>
-          <div className="flex min-w-0 flex-col justify-center gap-6 p-7 sm:p-9"><p className="text-xs font-semibold uppercase text-primary">Latest project</p><h2 className="break-words text-2xl font-semibold">{featured.name}</h2><div className="flex gap-8 text-xs text-muted-foreground"><div>Created<p className="mt-1 font-semibold text-foreground">{new Date(featured.created_at).toLocaleDateString()}</p></div><div>Your role<p className="mt-1 font-semibold capitalize text-foreground">{featured.role}</p></div></div><span className="flex items-center gap-2 text-sm font-semibold text-primary">Open project <ArrowUpRight className="size-4"/></span></div>
-        </Link>}
-        <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.slice(1).map((p) => <Link key={p.id} to="/p/$projectId" params={{ projectId: p.id }} className="group min-w-0"><div className="overflow-hidden rounded-lg border transition group-hover:border-primary"><SitePreview nodes={thumbs?.[p.id]?.nodes ?? []} theme={thumbs?.[p.id]?.theme ?? DEFAULT_THEME} height={230}/></div><h2 className="mt-4 truncate text-sm font-semibold">{p.name}</h2><p className="mt-1 text-xs capitalize text-muted-foreground">{p.role}</p></Link>)}
-          {!readOnly && <Button variant="ghost" onClick={() => { setTpl(""); setCreating(true); }} className="h-[230px] flex-col gap-3 border border-dashed text-muted-foreground"><Plus className="size-7 text-primary"/>New blank project</Button>}
+        {isLoading && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-56 animate-pulse rounded-lg bg-muted"/>)}</div>}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {!readOnly && !isLoading && <button type="button" onClick={() => { setTpl(""); setCreating(true); }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition hover:ring-2 hover:ring-primary">
+            <span className="grid h-[180px] place-items-center bg-muted"><span className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground"><Plus className="size-6"/></span></span>
+            <span className="block p-3"><span className="block text-sm font-medium">New design file</span><span className="text-xs text-muted-foreground">Blank or from a template</span></span>
+          </button>}
+          {filtered.map((p) => <Link key={p.id} to="/p/$projectId" params={{ projectId: p.id }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition hover:ring-2 hover:ring-primary">
+            <div className="h-[180px] overflow-hidden bg-muted"><SitePreview nodes={thumbs?.[p.id]?.nodes ?? []} theme={thumbs?.[p.id]?.theme ?? DEFAULT_THEME} height={180}/></div>
+            <div className="flex min-w-0 items-center gap-2 border-t p-3"><span className="grid size-6 shrink-0 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground">{p.name.slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{p.name}</span><span className="block text-xs capitalize text-muted-foreground">{p.role} · {new Date(p.created_at).toLocaleDateString()}</span></span><ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100"/></div>
+          </Link>)}
         </div>
         {!isLoading && filtered.length === 0 && <div className="mt-8"><h2 className="mb-6 text-xl font-semibold">Start from a template</h2><TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/></div>}
       </>}
