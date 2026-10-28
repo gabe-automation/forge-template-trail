@@ -38,6 +38,8 @@ import { presetFor } from "@/lib/snippets";
 import { MediaPanel, AttrsPanel, SnippetsPanel } from "@/components/editor/BlockPanels";
 import { DeployDialog } from "@/components/editor/DeployDialog";
 import { Rocket, Upload } from "lucide-react";
+import { ContextMenuOverlay, ZoomHud, LayersTree, ZOOM_MIN, ZOOM_MAX, type MenuItem } from "@/components/editor/CanvasChrome";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDeviceAccess } from "@/hooks/use-device-access";
 
 export const Route = createFileRoute("/_authenticated/p/$projectId")({
@@ -472,7 +474,77 @@ function EditorPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [page?.kind]);
-  const scale = Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width);
+  const fit = Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width);
+  const [zoom, setZoom] = useState(1);
+  const scale = fit * zoom;
+  const zoomRef = useRef({ zoom, fit });
+  zoomRef.current = { zoom, fit };
+  const [frameW, setFrameW] = useState<number | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string | null } | null>(null);
+  const clipRef = useRef<NodeView | null>(null);
+  const spaceRef = useRef(false);
+
+  // Ctrl/Cmd + wheel or trackpad pinch zooms around the cursor; plain wheel scrolls.
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      const { zoom: z, fit: f } = zoomRef.current;
+      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-dy * 0.0025)));
+      const r = el.getBoundingClientRect();
+      const px = e.clientX - r.left, py = e.clientY - r.top;
+      const k = next / z;
+      const sx = (el.scrollLeft + px) * k - px, sy = (el.scrollTop + py) * k - py;
+      setZoom(next);
+      requestAnimationFrame(() => { el.scrollLeft = sx; el.scrollTop = sy; });
+      void f;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [page?.kind]);
+
+  // Space held = hand tool (drag to pan), like Figma.
+  useEffect(() => {
+    const typing = (t: EventTarget | null) => { const el = t as HTMLElement | null; return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); };
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !typing(e.target)) { spaceRef.current = true; if (areaRef.current) areaRef.current.style.cursor = "grab"; e.preventDefault(); }
+    };
+    const up = (e: KeyboardEvent) => { if (e.code === "Space") { spaceRef.current = false; if (areaRef.current) areaRef.current.style.cursor = ""; } };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
+
+  function panStart(e: React.PointerEvent<HTMLElement>) {
+    if (!(spaceRef.current || e.button === 1)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    const sx = e.clientX, sy = e.clientY, l = el.scrollLeft, t = el.scrollTop;
+    el.style.cursor = "grabbing";
+    const mv = (ev: PointerEvent) => { el.scrollLeft = l - (ev.clientX - sx); el.scrollTop = t - (ev.clientY - sy); };
+    const upFn = () => { el.style.cursor = spaceRef.current ? "grab" : ""; window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", upFn); };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", upFn);
+  }
+
+  /** Drag the frame edge to resize the page width; crossing 1024 / 640 switches layouts live. */
+  function frameResize(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const sx = e.clientX, w0 = BREAKPOINTS[bp].width, sc = scale;
+    const mv = (ev: PointerEvent) => {
+      const w = Math.round(Math.max(320, Math.min(1920, w0 + ((ev.clientX - sx) * 2) / sc)));
+      setFrameW(w);
+      setBp(w > 1024 ? "desktop" : w > 640 ? "tablet" : "mobile");
+    };
+    const upFn = () => { setFrameW(null); window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", upFn); };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", upFn);
+  }
 
   function jumpTo(a: Activity) {
     if (!a.node_id) return;
