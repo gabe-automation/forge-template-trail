@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, FolderOpen, LayoutTemplate, LogOut, Plus, Search } from "lucide-react";
@@ -10,14 +11,14 @@ export function WorkspaceShell({ children, section, onSection, signedIn = false,
   children: ReactNode; section: string; onSection: (value: string) => void; signedIn?: boolean;
   onSignOut?: () => void; search: string; onSearch: (value: string) => void;
 }) {
-  return <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
+  return <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
     <aside className="border-b bg-sidebar lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:border-b-0 lg:border-r">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-5 lg:block lg:p-7">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-5 lg:block lg:p-4">
         <Link to="/" className="font-display text-xl font-bold">WebCraft<span className="text-primary">.</span></Link>
-        <nav aria-label="Workspace" className="flex gap-1 lg:mt-10 lg:flex-col">
+        <nav aria-label="Workspace" className="flex gap-1 lg:mt-4 lg:flex-col">
           {[{ name: "Projects", icon: FolderOpen }, { name: "Templates", icon: LayoutTemplate }].map(({ name, icon: Icon }) =>
             <Button key={name} variant="ghost" aria-pressed={section === name} onClick={() => onSection(name)}
-              aria-label={name} className={`justify-start px-3 lg:w-full ${section === name ? "bg-primary/10 text-primary" : "text-muted-foreground"}`}>
+              aria-label={name} className={`h-8 justify-start px-3 text-sm lg:w-full ${section === name ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}>
               <Icon className="size-4"/><span className="hidden sm:inline">{name}</span>
             </Button>)}
         </nav>
@@ -29,11 +30,13 @@ export function WorkspaceShell({ children, section, onSection, signedIn = false,
       </div>
     </aside>
     <main className="min-w-0">
-      <header className="grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-5 py-3 sm:gap-4 sm:px-8">
-        <div className="relative max-w-sm min-w-0"><Search className="absolute left-3 top-3 size-4 text-muted-foreground"/>
-          <Input aria-label="Search workspace" placeholder="Search workspace…" value={search} onChange={(e) => onSearch(e.target.value)} className="h-10 bg-background pl-10"/>
+      <header className="grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-5 py-3 sm:gap-4 sm:px-8">
+        <div className="relative max-w-sm min-w-0"><Search className="absolute left-3 top-2 size-4 text-muted-foreground"/>
+          <Input aria-label="Search workspace" placeholder="Search workspace…" value={search} onChange={(e) => onSearch(e.target.value)} className="h-8 bg-muted border-transparent pl-10"/>
         </div>
+        <div className="flex items-center gap-1"><ThemeToggle/>
         {signedIn ? <Button variant="outline" onClick={onSignOut} aria-label="Sign out" title="Sign out"><LogOut className="size-4"/><span className="hidden sm:inline">Sign out</span></Button> : <Button asChild variant="outline"><Link to="/auth">Sign in<ArrowUpRight className="size-4"/></Link></Button>}
+        </div>
       </header>
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">{children}</div>
     </main>

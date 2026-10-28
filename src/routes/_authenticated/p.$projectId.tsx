@@ -38,6 +38,8 @@ import { presetFor } from "@/lib/snippets";
 import { MediaPanel, AttrsPanel, SnippetsPanel } from "@/components/editor/BlockPanels";
 import { DeployDialog } from "@/components/editor/DeployDialog";
 import { Rocket, Upload } from "lucide-react";
+import { ContextMenuOverlay, ZoomHud, LayersTree, ZOOM_MIN, ZOOM_MAX, type MenuItem } from "@/components/editor/CanvasChrome";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDeviceAccess } from "@/hooks/use-device-access";
 
 export const Route = createFileRoute("/_authenticated/p/$projectId")({
@@ -325,6 +327,75 @@ function EditorPage() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  /** Change stacking order among siblings (later = on top). */
+  function restack(id: string, dir: "front" | "back" | "up" | "down") {
+    const n = views.find((v) => v.id === id);
+    if (!n || readOnly) return;
+    const sibs = views.filter((v) => v.parent === n.parent && v.id !== id).sort((x, y) => (x.order < y.order ? -1 : 1));
+    const all = views.filter((v) => v.parent === n.parent).sort((x, y) => (x.order < y.order ? -1 : 1));
+    const cur = all.findIndex((v) => v.id === id);
+    let idx = dir === "front" ? sibs.length : dir === "back" ? 0 : dir === "up" ? Math.min(sibs.length, cur + 1) : Math.max(0, cur - 1);
+    if (idx < 0) idx = 0;
+    const prev = sibs[idx - 1]?.order ?? null;
+    const next = idx < sibs.length ? sibs[idx]!.order : null;
+    room.op(id, { order: keyBetween(prev, next) }, "reordered", labelOf(n));
+  }
+
+  function paste() {
+    const c = clipRef.current;
+    if (!c || readOnly || page?.kind !== "canvas") return;
+    void addBlock(c.type, undefined, c);
+  }
+
+  // Figma-style shortcuts: zoom, copy/paste, layer order.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (page?.kind !== "canvas" || t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "=" || e.key === "+")) { e.preventDefault(); setZoom((z) => Math.min(ZOOM_MAX, z * 1.25)); }
+      else if (mod && e.key === "-") { e.preventDefault(); setZoom((z) => Math.max(ZOOM_MIN, z / 1.25)); }
+      else if ((mod && e.key === "0") || (e.shiftKey && e.code === "Digit1")) { e.preventDefault(); setZoom(1); }
+      else if (mod && e.key === "c" && sel) { clipRef.current = sel; toast.success("Copied"); }
+      else if (mod && e.key === "v") { e.preventDefault(); paste(); }
+      else if (sel && !readOnly && !selLockedBy && (e.key === "]" || e.key === "[")) {
+        e.preventDefault();
+        restack(sel.id, e.key === "]" ? (mod ? "front" : "up") : (mod ? "back" : "down"));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  function menuItems(id: string | null): MenuItem[] {
+    const n = id ? views.find((v) => v.id === id) : undefined;
+    const locked = !!n && (n.id === sel?.id ? !!selLockedBy : false);
+    const off = readOnly || locked;
+    const canvasOnly: MenuItem[] = [
+      { label: "Paste here", shortcut: "Ctrl+V", onClick: paste, disabled: readOnly || !clipRef.current },
+      "sep",
+      { label: "Zoom in", shortcut: "Ctrl +", onClick: () => setZoom((z) => Math.min(ZOOM_MAX, z * 1.25)) },
+      { label: "Zoom out", shortcut: "Ctrl −", onClick: () => setZoom((z) => Math.max(ZOOM_MIN, z / 1.25)) },
+      { label: "Zoom to fit", shortcut: "Shift+1", onClick: () => setZoom(1) },
+    ];
+    if (!n) return canvasOnly;
+    return [
+      { label: "Copy", shortcut: "Ctrl+C", onClick: () => { clipRef.current = n; toast.success("Copied"); } },
+      { label: "Paste", shortcut: "Ctrl+V", onClick: paste, disabled: readOnly || !clipRef.current },
+      { label: "Duplicate", shortcut: "Ctrl+D", onClick: () => void addBlock(n.type, undefined, n), disabled: off },
+      "sep",
+      { label: "Bring to front", shortcut: "Ctrl+]", onClick: () => restack(n.id, "front"), disabled: off },
+      { label: "Bring forward", shortcut: "]", onClick: () => restack(n.id, "up"), disabled: off },
+      { label: "Send backward", shortcut: "[", onClick: () => restack(n.id, "down"), disabled: off },
+      { label: "Send to back", shortcut: "Ctrl+[", onClick: () => restack(n.id, "back"), disabled: off },
+      "sep",
+      { label: "Select parent", onClick: () => n.parent && select(n.parent), disabled: !n.parent },
+      { label: "Edit properties", onClick: () => { select(n.id); setPanelOpen(true); } },
+      "sep",
+      { label: "Delete", shortcut: "Del", onClick: () => { void removeNode(n.id); select(null); }, disabled: off, danger: true },
+    ];
+  }
+
   async function saveTheme(t: Theme) {
     if (readOnly) return;
     setTheme(t);
@@ -472,7 +543,77 @@ function EditorPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [page?.kind]);
-  const scale = Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width);
+  const fit = Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width);
+  const [zoom, setZoom] = useState(1);
+  const scale = fit * zoom;
+  const zoomRef = useRef({ zoom, fit });
+  zoomRef.current = { zoom, fit };
+  const [frameW, setFrameW] = useState<number | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string | null } | null>(null);
+  const clipRef = useRef<NodeView | null>(null);
+  const spaceRef = useRef(false);
+
+  // Ctrl/Cmd + wheel or trackpad pinch zooms around the cursor; plain wheel scrolls.
+  useEffect(() => {
+    const el = areaRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      const { zoom: z, fit: f } = zoomRef.current;
+      const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * Math.exp(-dy * 0.0025)));
+      const r = el.getBoundingClientRect();
+      const px = e.clientX - r.left, py = e.clientY - r.top;
+      const k = next / z;
+      const sx = (el.scrollLeft + px) * k - px, sy = (el.scrollTop + py) * k - py;
+      setZoom(next);
+      requestAnimationFrame(() => { el.scrollLeft = sx; el.scrollTop = sy; });
+      void f;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [page?.kind]);
+
+  // Space held = hand tool (drag to pan), like Figma.
+  useEffect(() => {
+    const typing = (t: EventTarget | null) => { const el = t as HTMLElement | null; return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable); };
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !typing(e.target)) { spaceRef.current = true; if (areaRef.current) areaRef.current.style.cursor = "grab"; e.preventDefault(); }
+    };
+    const up = (e: KeyboardEvent) => { if (e.code === "Space") { spaceRef.current = false; if (areaRef.current) areaRef.current.style.cursor = ""; } };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
+  }, []);
+
+  function panStart(e: React.PointerEvent<HTMLElement>) {
+    if (!(spaceRef.current || e.button === 1)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    const sx = e.clientX, sy = e.clientY, l = el.scrollLeft, t = el.scrollTop;
+    el.style.cursor = "grabbing";
+    const mv = (ev: PointerEvent) => { el.scrollLeft = l - (ev.clientX - sx); el.scrollTop = t - (ev.clientY - sy); };
+    const upFn = () => { el.style.cursor = spaceRef.current ? "grab" : ""; window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", upFn); };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", upFn);
+  }
+
+  /** Drag the frame edge to resize the page width; crossing 1024 / 640 switches layouts live. */
+  function frameResize(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const sx = e.clientX, w0 = BREAKPOINTS[bp].width, sc = scale;
+    const mv = (ev: PointerEvent) => {
+      const w = Math.round(Math.max(320, Math.min(1920, w0 + ((ev.clientX - sx) * 2) / sc)));
+      setFrameW(w);
+      setBp(w > 1024 ? "desktop" : w > 640 ? "tablet" : "mobile");
+    };
+    const upFn = () => { setFrameW(null); window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", upFn); };
+    window.addEventListener("pointermove", mv);
+    window.addEventListener("pointerup", upFn);
+  }
 
   function jumpTo(a: Activity) {
     if (!a.node_id) return;
@@ -499,7 +640,7 @@ function EditorPage() {
 
   return (
     <div className="editor-workspace flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-3 py-2 xl:flex xl:h-14 xl:py-0">
+      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-12 xl:py-0">
         <Button variant="ghost" size="icon" asChild><Link to="/projects" aria-label="Back to projects"><ArrowLeft /></Link></Button>
         <span className="min-w-0 truncate font-display text-sm font-semibold xl:max-w-40">{info?.project?.name ?? "…"}</span>
         <Button size="sm" variant={chatOpen ? "secondary" : "outline"} onClick={() => openChat()} className="relative ml-auto" aria-label="Open team chat">
@@ -562,6 +703,7 @@ function EditorPage() {
             </div>
           </PopoverContent>
         </Popover>}
+        <ThemeToggle />
         <div className="hidden -space-x-2 sm:flex">
           {room.peers.map((p) => (
             <span key={p.session} title={`${p.name}${p.session === room.session ? " (you)" : ""} · ${p.status}`}
@@ -578,7 +720,7 @@ function EditorPage() {
       <div className="flex min-h-0 flex-1">
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside className={`${panelOpen ? "fixed bottom-0 left-0 top-[6.75rem] z-40 xl:top-14 flex shadow-lift" : "hidden"} w-[min(20rem,90vw)] shrink-0 flex-col border-r bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
+        <aside className={`${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-12 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-2 grid grid-cols-5">
@@ -744,7 +886,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside className="order-last hidden w-52 shrink-0 flex-col overflow-y-auto border-l bg-sidebar p-3 md:flex xl:w-56">
+        <aside className="order-first hidden w-56 shrink-0 flex-col overflow-y-auto border-r bg-sidebar p-2 md:flex xl:w-60">
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
             <DropdownMenu>
@@ -791,9 +933,15 @@ function EditorPage() {
               <Plus className="size-4" /> New blank page
             </button>
           )}
+          {page?.kind === "canvas" && (
+            <div className="mb-4 border-t pt-3">
+              <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</p>
+              <LayersTree views={views} selected={selected} onSelect={(id) => select(id)} onContext={(id, x, y) => { select(id); setMenu({ x, y, id }); }} />
+            </div>
+          )}
           {page?.kind === "canvas" && !readOnly && (
             <>
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Blocks</p>
+              <p className="mb-2 border-t px-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Assets</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.keys(BLOCKS) as BlockType[]).map((t) => (
                   <button key={t} disabled={readOnly} draggable={!readOnly}
@@ -839,12 +987,23 @@ function EditorPage() {
             draft={chatDraft} clearDraft={() => setChatDraft("")} wbItems={wbItems}
             onOpenWb={() => { const w = pages.find((x) => x.kind === "whiteboard"); if (w) { setPageId(w.id); setChatOpen(false); } }} />
         ) : (
-          <main ref={areaRef} className="editor-gradient min-w-0 flex-1 overflow-auto p-3 sm:p-6 lg:p-8" onMouseLeave={() => room.setStatus(selected && !readOnly ? "editing" : "watching")}>
+          <div className="relative flex min-h-0 min-w-0 flex-1">
+          <main ref={areaRef} className="editor-gradient min-w-0 flex-1 overflow-auto p-3 sm:p-6 lg:p-8"
+            onPointerDownCapture={panStart}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const id = (e.target as HTMLElement).closest<HTMLElement>("[data-node]")?.dataset["node"] ?? null;
+              if (id) select(id);
+              setMenu({ x: e.clientX, y: e.clientY, id });
+            }}
+            onMouseLeave={() => room.setStatus(selected && !readOnly ? "editing" : "watching")}>
             {!room.loaded || !page ? (
               <p className="text-center text-muted-foreground">Loading page…</p>
             ) : (
               <>
                 {views.length === 0 && <p className="mb-4 text-center text-muted-foreground">{readOnly ? "Empty page" : "Blank page — add a Navbar and a Hero from the blocks panel on the right."}</p>}
+                <div className="relative mx-auto" style={{ width: BREAKPOINTS[bp].width * scale }}>
+                <p className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground"><span className="font-medium text-foreground">{page.title}</span> {BREAKPOINTS[bp].label} · {frameW ?? BREAKPOINTS[bp].width}px</p>
                 <Canvas nodes={views} bp={bp} theme={theme} scale={scale} selected={selected} mySession={room.session} leases={room.leases}
                   cursors={room.cursors} pageId={page.id} drags={room.drags} readOnly={readOnly} prefs={prefs} locks={room.locks} canOverride={canOverride} onSelect={select} onCommit={commitGeo}
                   onLiveDrag={(id, g, done) => room.sendDrag({ id, bp, ...g, done })}
@@ -859,14 +1018,27 @@ function EditorPage() {
                     const next = idx < sibs.length ? sibs[idx]!.order : null;
                     room.op(id, { order: keyBetween(prev, next) }, "reordered", labelOf(n));
                   }} />
+                {!readOnly && !isMobile && (
+                  <div role="separator" aria-label="Drag to resize page width" title="Drag to resize — the layout switches between desktop, tablet and mobile"
+                    onPointerDown={frameResize}
+                    className="group absolute -right-4 bottom-0 top-6 flex w-3 cursor-ew-resize items-center justify-center">
+                    <span className="h-10 w-1 rounded-full bg-border transition group-hover:bg-primary" />
+                  </div>
+                )}
+                </div>
               </>
             )}
           </main>
+          <div className="pointer-events-none absolute bottom-3 right-3 z-20">
+            <ZoomHud zoom={zoom} onZoom={setZoom} width={frameW ?? BREAKPOINTS[bp].width} label={BREAKPOINTS[bp].label} />
+          </div>
+          </div>
         )}
         </div>
 
       </div>
 
+      {menu && <ContextMenuOverlay x={menu.x} y={menu.y} items={menuItems(menu.id)} onClose={() => setMenu(null)} />}
       <Dialog open={tplOpen} onOpenChange={setTplOpen}>
         <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
           <DialogHeader><DialogTitle>Website templates</DialogTitle><DialogDescription>Each template is a complete multi-page website — a home page plus real inner pages, all editable block by block.</DialogDescription></DialogHeader>
