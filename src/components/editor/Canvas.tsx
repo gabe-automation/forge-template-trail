@@ -306,6 +306,11 @@ export function Canvas(p: Props) {
             {nl.mode === "move" ? "📌 Pinned" : "🔒 Locked"} by {nl.locked_by_name}{pinned ? "" : " · you can edit"}
           </span>
         )}
+        {isSel && (
+          <span className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 -translate-x-1/2 whitespace-nowrap rounded bg-primary px-1.5 py-0.5 font-sans text-[10px] font-medium text-primary-foreground" style={{ transform: `translateX(-50%) scale(${1 / p.scale})`, transformOrigin: "top center" }}>
+            {Math.round(g.w)} × {Math.round(g.h)}
+          </span>
+        )}
         {isSel && !p.readOnly && !pinned && (
           <div
             className="absolute -bottom-1.5 -right-1.5 z-10 size-3 cursor-se-resize rounded-sm border-2 border-primary bg-card"
