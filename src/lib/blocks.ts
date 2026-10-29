@@ -1,7 +1,8 @@
 export type BlockType =
   | "navbar" | "hero" | "heading" | "text" | "button" | "image" | "cards"
   | "pricing" | "testimonial" | "login" | "register" | "divider" | "footer"
-  | "input" | "flex" | "grid" | "stack" | "absolute" | "section" | "video";
+  | "input" | "flex" | "grid" | "stack" | "absolute" | "section" | "video"
+  | "chart" | "stats" | "product" | "cart";
 
 export const CONTAINER_TYPES: BlockType[] = ["flex", "grid", "stack", "absolute", "section"];
 export const isContainer = (t: BlockType) => CONTAINER_TYPES.includes(t);
@@ -96,6 +97,10 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   absolute: { name: "Absolute box", w: 520, h: 300, text: "", sub: "", label: "" },
   video: { name: "Video", w: 720, h: 420, text: "Product walkthrough", sub: "", label: "" },
   section: { name: "Section", w: 1200, h: 320, text: "", sub: "", label: "" },
+  chart: { name: "Chart", w: 560, h: 320, text: "Jan|Feb|Mar|Apr|May|Jun", sub: "12|19|15|28|24|34", label: "" },
+  stats: { name: "Dashboard stats", w: 1080, h: 140, text: "Revenue|Visitors|Orders|Conversion", sub: "$12.4k|8,204|318|3.9%", label: "+12%|+4%|-2%|+0.6%" },
+  product: { name: "Product", w: 300, h: 420, text: "Linen tote bag", sub: "24.00", label: "Add to cart" },
+  cart: { name: "Cart & checkout", w: 380, h: 320, text: "Your cart", sub: "Your cart is empty.", label: "Checkout" },
 };
 
 export type Theme = { primary: string; accent: string; surface: string; ink: string };
@@ -200,10 +205,73 @@ export function blockHtml(type: BlockType, c: BlockContent, id: string): string 
       const a = { type: "text", name: "field", ...(c.attrs ?? {}) };
       return `<label class="wc-field"><span>${t}</span><input placeholder="${s}"${attrString(a)}><small class="wc-field-msg" aria-live="polite"></small></label>`;
     }
+    case "chart": return chartSvg(c);
+    case "stats": {
+      const t2 = split(c.text), v = split(c.sub), d = split(c.label);
+      return `<section class="wc-stats">${t2.map((x, i) => `<article class="wc-stat"><span>${esc(x)}</span><strong>${esc(v[i] ?? "")}</strong>${d[i] ? `<em class="${d[i]!.startsWith("-") ? "wc-down" : "wc-up"}">${esc(d[i]!)}</em>` : ""}</article>`).join("")}</section>`;
+    }
+    case "product": {
+      const img = mediaUrl(c.attrs?.["data-image"]);
+      const cur = esc(c.attrs?.["data-currency"] || "$");
+      const price = Number.parseFloat(c.sub) || 0;
+      return `<article class="wc-product" data-wc-product="${esc(id)}" data-name="${t}" data-price="${price.toFixed(2)}" data-currency="${cur}">${img ? `<img src="${esc(img)}" alt="${t}">` : `<div class="wc-image-art" role="img" aria-label="${t}"></div>`}<h3>${t}</h3><p class="wc-product-price">${cur}${price.toFixed(2)}</p>${href ? `<a class="wc-btn" href="${href}"${nt}>Buy now</a>` : ""}<button type="button" class="wc-btn wc-add">${l}</button></article>`;
+    }
+    case "cart":
+      return `<section class="wc-cart" data-wc-cart data-checkout="${href}"><h3>${t}</h3><ul class="wc-cart-items"></ul><p class="wc-cart-empty">${s}</p><p class="wc-cart-total">Total <strong>0.00</strong></p>${action(l).replace("wc-btn", "wc-btn wc-checkout")}</section>`;
     case "section":
     case "flex": case "grid": case "stack": case "absolute":
       return ""; // layout panels render only their children
   }
+}
+
+/** Inline SVG chart: labels in text, values in sub (both separated by |), type via data-chart. */
+export function chartSvg(c: BlockContent): string {
+  const labels = split(c.text), vals = split(c.sub).map((v) => Number.parseFloat(v) || 0);
+  const kind = c.attrs?.["data-chart"] ?? "bar";
+  const max = Math.max(1, ...vals), W = 400, H = 220, n = Math.max(1, vals.length);
+  const title = esc(c.attrs?.["data-title"] ?? "");
+  let body = "";
+  if (kind === "pie" || kind === "donut") {
+    const sum = vals.reduce((a, b) => a + b, 0) || 1; let a0 = -Math.PI / 2;
+    body = vals.map((v, i) => {
+      const a1 = a0 + (v / sum) * Math.PI * 2, r = 90, cx = 200, cy = 110;
+      const p = `M${cx},${cy} L${cx + r * Math.cos(a0)},${cy + r * Math.sin(a0)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${cx + r * Math.cos(a1)},${cy + r * Math.sin(a1)} Z`;
+      a0 = a1;
+      return `<path d="${p}" fill="var(--wc-primary)" fill-opacity="${1 - (i / n) * 0.75}" stroke="var(--wc-surface)" stroke-width="2"><title>${esc(labels[i] ?? "")}: ${v}</title></path>`;
+    }).join("") + (kind === "donut" ? `<circle cx="200" cy="110" r="52" fill="var(--wc-surface)"/>` : "");
+  } else {
+    const step = W / n;
+    const pts = vals.map((v, i) => [step * i + step / 2, H - 20 - (v / max) * (H - 40)] as const);
+    const axis = labels.map((x, i) => `<text x="${step * i + step / 2}" y="${H - 4}" text-anchor="middle">${esc(x)}</text>`).join("");
+    if (kind === "line" || kind === "area") {
+      const line = pts.map((p) => p.join(",")).join(" ");
+      body = (kind === "area" ? `<polygon points="${pts[0]?.[0] ?? 0},${H - 20} ${line} ${pts[pts.length - 1]?.[0] ?? 0},${H - 20}" fill="var(--wc-primary)" fill-opacity=".18"/>` : "")
+        + `<polyline points="${line}" fill="none" stroke="var(--wc-primary)" stroke-width="3" stroke-linejoin="round"/>` + pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--wc-primary)"/>`).join("") + axis;
+    } else {
+      body = pts.map((p, i) => `<rect x="${p[0] - step * 0.3}" y="${p[1]}" width="${step * 0.6}" height="${H - 20 - p[1]}" rx="4" fill="var(--wc-primary)"><title>${esc(labels[i] ?? "")}: ${vals[i]}</title></rect>`).join("") + axis;
+    }
+  }
+  return `<figure class="wc-chart">${title ? `<figcaption>${title}</figcaption>` : ""}<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${title || "Chart"}">${body}</svg></figure>`;
+}
+
+/** Pretty-print CSS: one declaration per line, 2-space indent, "prop: value;", blank line between rules. */
+export function formatCss(css: string): string {
+  let out = "", buf = "", depth = 0, paren = 0, quote = "";
+  const pad = () => "  ".repeat(depth);
+  const decl = (d: string) => { const i = d.indexOf(":"); return i < 0 ? d.trim() : `${d.slice(0, i).trim()}: ${d.slice(i + 1).trim()}`; };
+  const src = css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[{};]/g, " "));
+  for (const ch of src) {
+    if (quote) { buf += ch; if (ch === quote) quote = ""; continue; }
+    if (ch === '"' || ch === "'") { quote = ch; buf += ch; continue; }
+    if (ch === "(") paren++;
+    if (ch === ")") paren--;
+    if (paren > 0) { buf += ch; continue; }
+    if (ch === "{") { out += `${pad()}${buf.trim().replace(/\s+/g, " ").replace(/\s*,\s*/g, ", ")} {\n`; depth++; buf = ""; }
+    else if (ch === ";") { if (buf.trim()) out += `${pad()}${depth ? decl(buf) : buf.trim()};\n`; buf = ""; }
+    else if (ch === "}") { if (buf.trim()) out += `${pad()}${decl(buf)};\n`; buf = ""; depth = Math.max(0, depth - 1); out += `${pad()}}\n${depth === 0 ? "\n" : ""}`; }
+    else buf += ch;
+  }
+  return (out + buf.trim()).replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 
 export function themeVars(t: Theme): string {
@@ -279,6 +347,39 @@ export const BLOCK_CSS = `
 .wc-video-frame{flex:1;width:100%;min-height:0;border:0;border-radius:14px;background:#000;object-fit:cover;display:block;}
 .wc-video-empty{flex:1;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,var(--wc-ink),color-mix(in srgb,var(--wc-primary) 60%,var(--wc-ink)));color:var(--wc-surface);font-size:42px;}
 .wc-video figcaption{font:13px system-ui,sans-serif;opacity:.6;}
+.wc-chart{margin:0;height:100%;display:flex;flex-direction:column;gap:6px;padding:12px;}
+.wc-chart figcaption{font:600 14px system-ui,sans-serif;}
+.wc-chart svg{flex:1;width:100%;min-height:0;font:11px system-ui,sans-serif;fill:currentColor;}
+.wc-chart text{opacity:.6;}
+.wc-stats{height:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:12px;}
+.wc-stat{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:12px;border:1px solid color-mix(in srgb,var(--wc-ink) 12%,transparent);background:color-mix(in srgb,var(--wc-surface) 92%,#fff);font-family:system-ui,sans-serif;}
+.wc-stat span{font-size:13px;opacity:.65;}
+.wc-stat strong{font:700 28px Sora,system-ui,sans-serif;}
+.wc-stat em{font-style:normal;font-size:12px;font-weight:600;}
+.wc-up{color:#15803d;}
+.wc-down{color:#b91c1c;}
+.wc-product{height:100%;display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--wc-ink) 12%,transparent);font-family:system-ui,sans-serif;}
+.wc-product img,.wc-product .wc-image-art{flex:1;min-height:0;width:100%;object-fit:cover;border-radius:10px;}
+.wc-product h3{margin:0;font-size:18px;}
+.wc-product-price{margin:0;font-weight:700;}
+.wc-product .wc-btn{height:42px;min-height:42px;flex:0 0 auto;}
+.wc-cart{height:100%;display:flex;flex-direction:column;gap:10px;padding:20px;border-radius:14px;border:1px solid color-mix(in srgb,var(--wc-ink) 12%,transparent);font-family:system-ui,sans-serif;overflow:auto;}
+.wc-cart h3{margin:0;font-size:20px;}
+.wc-cart-items{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px;}
+.wc-cart-items li{display:flex;justify-content:space-between;gap:8px;}
+.wc-cart-items button{border:0;background:none;cursor:pointer;opacity:.6;}
+.wc-cart-empty{margin:0;opacity:.6;font-size:14px;}
+.wc-cart-total{margin:auto 0 0;display:flex;justify-content:space-between;}
+.wc-cart .wc-btn{height:44px;min-height:44px;flex:0 0 auto;}
+@keyframes wc-fade{from{opacity:0}to{opacity:1}}
+@keyframes wc-up{from{opacity:0;translate:0 32px}to{opacity:1;translate:0 0}}
+@keyframes wc-zoom{from{opacity:0;scale:.85}to{opacity:1;scale:1}}
+@keyframes wc-left{from{opacity:0;translate:-48px 0}to{opacity:1;translate:0 0}}
+@keyframes wc-right{from{opacity:0;translate:48px 0}to{opacity:1;translate:0 0}}
+@keyframes wc-float{0%,100%{translate:0 0}50%{translate:0 -10px}}
+@keyframes wc-pulse{0%,100%{scale:1}50%{scale:1.04}}
+@keyframes wc-spin{to{rotate:360deg}}
+@media (prefers-reduced-motion:reduce){.wc-el{animation:none!important}}
 @media (max-width:1024px){.wc-hero{padding:36px}.wc-hero h1{font-size:52px}.wc-nav{gap:16px;padding:0 24px}.wc-heading{padding:40px 24px 16px}}
 @media (max-width:640px){.wc-hero{padding:24px;gap:18px}.wc-hero h1{font-size:36px;overflow-wrap:anywhere}.wc-hero p{font-size:16px}.wc-nav{padding:0 16px;gap:12px}.wc-nav ul{display:none}.wc-brand{margin-right:auto}.wc-heading{font-size:28px}.wc-cards,.wc-pricing{padding:20px;gap:10px;grid-template-columns:1fr}.wc-card,.wc-plan{padding:18px}.wc-quote,.wc-form,.wc-section{padding:24px}.wc-footer{padding:16px;gap:12px;flex-wrap:wrap}.wc-box-flex{flex-direction:column!important;height:auto!important;min-height:100%}.wc-box-flex>.wc-flow{width:100%!important}.wc-box-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 `;
@@ -288,8 +389,30 @@ export type BlockStyle = {
   bg?: string; color?: string; btn?: string; radius?: number; pad?: number;
   align?: "left" | "center" | "right"; opacity?: number; scale?: number;
   border?: string; shadow?: boolean; font?: "serif" | "sans" | "mono";
+  shape?: ShapeKey; clip?: string; rotate?: number; anim?: AnimKey; animDur?: number; animDelay?: number;
 };
-export const STYLE_KEYS: (keyof BlockStyle)[] = ["bg", "color", "btn", "radius", "pad", "align", "opacity", "scale", "border", "shadow", "font"];
+export const SHAPES = {
+  rect: { label: "Rectangle", css: [] },
+  rounded: { label: "Rounded", css: [["border-radius", "28px"]] },
+  pill: { label: "Pill", css: [["border-radius", "999px"]] },
+  circle: { label: "Circle / oval", css: [["border-radius", "50%"]] },
+  blob: { label: "Blob", css: [["border-radius", "62% 38% 46% 54% / 55% 44% 56% 45%"]] },
+  leaf: { label: "Leaf", css: [["border-radius", "0 60% 0 60%"]] },
+  arch: { label: "Arch", css: [["border-radius", "999px 999px 0 0"]] },
+  hexagon: { label: "Hexagon", css: [["clip-path", "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)"]] },
+  diamond: { label: "Diamond", css: [["clip-path", "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)"]] },
+  triangle: { label: "Triangle", css: [["clip-path", "polygon(50% 0, 100% 100%, 0 100%)"]] },
+  star: { label: "Star", css: [["clip-path", "polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"]] },
+  arrow: { label: "Arrow", css: [["clip-path", "polygon(0 20%, 70% 20%, 70% 0, 100% 50%, 70% 100%, 70% 80%, 0 80%)"]] },
+  slant: { label: "Slanted", css: [["clip-path", "polygon(0 0, 100% 0, 100% 85%, 0 100%)"]] },
+  ticket: { label: "Notched", css: [["clip-path", "polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px)"]] },
+} satisfies Record<string, { label: string; css: [string, string][] }>;
+export type ShapeKey = keyof typeof SHAPES;
+export const ANIMS = { fade: "Fade in", up: "Slide up", left: "Slide from left", right: "Slide from right", zoom: "Zoom in", float: "Float (loop)", pulse: "Pulse (loop)", spin: "Spin (loop)" } as const;
+export type AnimKey = keyof typeof ANIMS;
+/** Only allow simple clip-path shape functions in custom shapes. */
+export const safeClip = (v?: string) => v && /^(polygon|circle|ellipse|inset)\([-\d.%\s,a-z()+*/]*\)$/i.test(v.trim()) && !/url|expression/i.test(v) ? v.trim() : "";
+export const STYLE_KEYS: (keyof BlockStyle)[] = ["bg", "color", "btn", "radius", "pad", "align", "opacity", "scale", "border", "shadow", "font", "shape", "clip", "rotate", "anim", "animDur", "animDelay"];
 const FONTS = { serif: "Georgia,'Times New Roman',serif", sans: "system-ui,-apple-system,sans-serif", mono: "ui-monospace,Menlo,monospace" };
 
 export function styleDecls(s: BlockStyle): [string, string][] {
@@ -305,6 +428,13 @@ export function styleDecls(s: BlockStyle): [string, string][] {
   if (s.border) o.push(["border", `2px solid ${s.border}`]);
   if (s.shadow) o.push(["box-shadow", "0 18px 40px -18px rgba(0,0,0,.35)"]);
   if (s.font) o.push(["font-family", FONTS[s.font]]);
+  if (s.shape && SHAPES[s.shape]) o.push(...(SHAPES[s.shape].css as [string, string][]));
+  if (safeClip(s.clip)) o.push(["clip-path", safeClip(s.clip)]);
+  if (s.rotate) o.push(["rotate", `${s.rotate}deg`]);
+  if (s.anim && ANIMS[s.anim]) {
+    const loop = ["float", "pulse", "spin"].includes(s.anim);
+    o.push(["animation", `wc-${s.anim} ${s.animDur ?? (loop ? 3 : 0.8)}s ${s.anim === "spin" ? "linear" : "cubic-bezier(.2,.7,.2,1)"} ${s.animDelay ?? 0}s ${loop ? "infinite" : "both"}`]);
+  }
   return o;
 }
 export const styleCss = (s: BlockStyle) => styleDecls(s).map(([k, v]) => `${k}:${v};`).join("");
