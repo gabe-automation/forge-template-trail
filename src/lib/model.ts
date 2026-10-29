@@ -1,4 +1,4 @@
-import { panelClass, BLOCKS, BLOCK_CSS, isFlow, isPanel, panelCss, scopeCss, BOX_KEYS, BREAKPOINTS, STYLE_KEYS, attrString, blockHtml, type BoxOpts, styleCss, themeVars, esc, type BlockStyle, type BlockType, type Breakpoint, type Theme } from "./blocks";
+import { panelClass, BLOCKS, BLOCK_CSS, isFlow, isPanel, panelCss, scopeCss, BOX_KEYS, BREAKPOINTS, STYLE_KEYS, attrString, blockHtml, formatCss, type BoxOpts, styleCss, themeVars, esc, type BlockStyle, type BlockType, type Breakpoint, type Theme } from "./blocks";
 import { val, type Props } from "./crdt";
 
 export type Geo = { x: number; y: number; w: number; h: number };
@@ -147,7 +147,7 @@ export function blockSnippet(n: NodeView, all: NodeView[]): { html: string; css:
   const html = renderNodeEl(n, "", tree, byId).replace(/^\n|\n$/g, "");
   const g = n.geo.desktop;
   const rule = `#${sid}{${styleCss(n.style) + panelCss(n.type, n.box)}left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px;z-index:1;}`;
-  const css = [rule, scopeCss(n.css, "#" + sid)].filter(Boolean).join("\n");
+  const css = formatCss([rule, scopeCss(n.css, "#" + sid)].filter(Boolean).join("\n"));
   let js = "";
   if (n.script.trim()) {
     const code = n.script.replace(/<\/script/gi, "<\\/script").split("\n").map((l) => "    " + l).join("\n");
@@ -185,7 +185,7 @@ ${body}
         return `  #${shortId(n.id)}{${bp === "desktop" ? styleCss(n.style) + panelCss(n.type, n.box) : ""}left:${g.x}px;top:${g.y}px;width:${g.w}px;height:${g.h}px;z-index:${sorted.indexOf(n) + 1};}`;
       })
       .join("\n");
-  const css = `:root{${themeVars(theme)}}
+  const rawCss = `:root{${themeVars(theme)}}
 body{margin:0;background:var(--wc-surface);}
 .wc-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
 ${BLOCK_CSS.trim()}
@@ -201,6 +201,7 @@ ${rules("tablet")}
 ${rules("mobile")}
 }
 `;
+  const css = formatCss(rawCss);
   const scripts = sorted.filter((n) => n.script.trim()).map((n) => {
     const sid = shortId(n.id);
     const code = n.script.replace(/<\/script/gi, "<\\/script").split("\n").map((l) => "    " + l).join("\n");
@@ -212,6 +213,54 @@ ${code}
   } catch (err) { console.error("[WebCraft] #${sid}", err); }
 })(document.getElementById("${sid}"), document.querySelector("#${sid} input, #${sid} textarea, #${sid} select"));`;
   });
-  const js = `// WebCraft site runtime — script.js is the JavaScript for the ENTIRE website.\n// It holds the site-wide behavior (smooth scrolling for # links) plus every\n// block's own logic from Edit → Code snippets → Script, in page order.\n\ndocument.addEventListener("click", (event) => {\n  if (!(event.target instanceof Element)) return;\n  const link = event.target.closest('a[href^="#"]');\n  if (!link) return;\n  const target = document.getElementById(link.getAttribute("href").slice(1));\n  if (target) {\n    event.preventDefault();\n    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });\n  }\n});\n\n${scripts.length ? scripts.join("\n\n") : "// No block-specific logic has been added yet."}\n`;
+  const js = `// WebCraft site runtime — script.js is the JavaScript for the ENTIRE website.\n// It holds the site-wide behavior (smooth scrolling for # links) plus every\n// block's own logic from Edit → Code snippets → Script, in page order.\n\ndocument.addEventListener("click", (event) => {\n  if (!(event.target instanceof Element)) return;\n  const link = event.target.closest('a[href^="#"]');\n  if (!link) return;\n  const target = document.getElementById(link.getAttribute("href").slice(1));\n  if (target) {\n    event.preventDefault();\n    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });\n  }\n});\n\n${STORE_JS}\n\n${scripts.length ? scripts.join("\n\n") : "// No block-specific logic has been added yet."}\n`;
   return { html, css, js };
 }
+
+/** Built-in store: cart lives in the visitor's browser; checkout opens the cart's payment link. */
+const STORE_JS = `// Store — product "Add to cart" buttons and the cart & checkout block.
+(function () {
+  const KEY = "wc-cart";
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
+  const save = (items) => { localStorage.setItem(KEY, JSON.stringify(items)); render(); };
+  function render() {
+    const items = load();
+    document.querySelectorAll("[data-wc-cart]").forEach((cart) => {
+      const list = cart.querySelector(".wc-cart-items");
+      const cur = items[0]?.currency || "$";
+      list.innerHTML = "";
+      items.forEach((it, i) => {
+        const li = document.createElement("li");
+        li.textContent = it.qty + " × " + it.name + " — " + cur + (it.price * it.qty).toFixed(2);
+        const rm = document.createElement("button");
+        rm.textContent = "✕";
+        rm.setAttribute("aria-label", "Remove " + it.name);
+        rm.onclick = () => { const next = load(); next.splice(i, 1); save(next); };
+        li.append(rm);
+        list.append(li);
+      });
+      cart.querySelector(".wc-cart-empty").hidden = items.length > 0;
+      cart.querySelector(".wc-cart-total strong").textContent = cur + items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2);
+    });
+  }
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const add = event.target.closest(".wc-add");
+    if (add) {
+      const p = add.closest("[data-wc-product]");
+      const items = load();
+      const found = items.find((it) => it.id === p.dataset.wcProduct);
+      if (found) found.qty += 1;
+      else items.push({ id: p.dataset.wcProduct, name: p.dataset.name, price: Number(p.dataset.price), currency: p.dataset.currency, qty: 1 });
+      save(items);
+      add.textContent = "Added ✓";
+      setTimeout(() => (add.textContent = "Add to cart"), 1200);
+    }
+    const checkout = event.target.closest(".wc-checkout");
+    if (checkout && checkout.tagName === "A") {
+      const total = load().reduce((s, it) => s + it.price * it.qty, 0).toFixed(2);
+      if (/paypal\\.me\\//i.test(checkout.href)) checkout.href = checkout.href.replace(/\\/[\\d.]+$/, "") + "/" + total;
+    }
+  });
+  render();
+})();`;
