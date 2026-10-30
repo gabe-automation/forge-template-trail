@@ -129,7 +129,7 @@ function Projects() {
           const choices: (typeof blank | SiteTemplate)[] = [blank, ...SITE_TEMPLATES];
           return (
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_230px]">
-              <div className="grid content-start gap-3 sm:grid-cols-2">
+              <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {choices.map((t) => {
                   const sel = tpl === t.id;
                   const isTpl = "blocks" in t && (t as SiteTemplate).blocks.length > 0;
@@ -141,7 +141,7 @@ function Projects() {
                         ? <SitePreview nodes={templateViews(t as SiteTemplate)} theme={t.theme} height={140} className="w-full border-b" />
                         : <div className="grid h-[140px] place-items-center border-b bg-dotgrid text-xs text-muted-foreground">Empty page</div>}
                       <span className="relative block p-3">
-                        <span className="flex items-center justify-between gap-2"><span className="block truncate text-sm font-medium">{t.name}</span><span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{count} page{count > 1 ? "s" : ""}</span></span>
+                        <span className="flex items-start justify-between gap-2"><span className="line-clamp-2 block text-sm font-medium leading-snug">{t.name}</span><span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{count} page{count > 1 ? "s" : ""}</span></span>
                         <span className="mt-1 line-clamp-2 block text-[11px] leading-snug text-muted-foreground">{t.description}</span>
                         {sel && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow"><Check className="size-3.5" /></span>}
                       </span>
@@ -160,7 +160,7 @@ function Projects() {
             </div>
           );
         })()}
-        <form onSubmit={create} className="sticky bottom-0 -mx-6 flex flex-col gap-2 border-t bg-card px-6 pb-1 pt-3 sm:flex-row">
+        <form onSubmit={create} className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t bg-card/95 px-6 py-3 backdrop-blur sm:flex-row">
           <Input aria-label="Project name" required autoFocus placeholder="Name your project — e.g. Studio redesign" value={name} onChange={(e) => setName(e.target.value)} className="flex-1" />
           <Button type="submit" disabled={busy || !name.trim()} className="sm:w-44">{busy ? "Creating…" : "Create project"}</Button>
         </form>
