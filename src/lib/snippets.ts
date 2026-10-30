@@ -118,7 +118,7 @@ export const PRESETS: Partial<Record<BlockType, { css?: string[]; js?: string[];
 };
 
 export function presetFor(type: BlockType): { css: string; script: string; html: string } {
-  const p = PRESETS[type];
+  const p = PRESETS[type] ?? {};
   const join = (k: SnippetKind, names?: string[]) => (names ?? []).map((n) => snippet(k, n)).join("\n");
   return { css: join("css", p.css), script: join("js", p.js), html: join("html", p.html) };
 }
