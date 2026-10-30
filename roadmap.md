@@ -10,3 +10,9 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 5. [x] New-project dialog redesigned: template cards with live thumbnails, page-count chips, selected checkmark, "Your choice" summary rail, sticky name/create bar.
 
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
+
+## Builder refinements
+- [ ] Reorganize header and panels for desktop, tablet, and phone editing.
+- [ ] Make compound block content independently editable and support grouping/ungrouping.
+- [ ] Move selective locks to code peek and retain automatic collaboration locks.
+- [ ] Add portable chart/store code integration points and verify editor flows.
