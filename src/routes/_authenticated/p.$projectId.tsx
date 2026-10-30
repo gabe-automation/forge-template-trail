@@ -640,7 +640,7 @@ function EditorPage() {
 
   return (
     <div className="editor-workspace flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-12 xl:py-0">
+      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-10 xl:py-0 [&_button]:h-7">
         <Button variant="ghost" size="icon" asChild><Link to="/projects" aria-label="Back to projects"><ArrowLeft /></Link></Button>
         <span className="min-w-0 truncate font-display text-sm font-semibold xl:max-w-40">{info?.project?.name ?? "…"}</span>
         <Button size="sm" variant={chatOpen ? "secondary" : "outline"} onClick={() => openChat()} className="relative ml-auto" aria-label="Open team chat">
@@ -703,6 +703,7 @@ function EditorPage() {
             </div>
           </PopoverContent>
         </Popover>}
+        <Button size="icon" variant="ghost" className="size-7" onClick={() => setSwap((v) => { localStorage.setItem("wc-swap", v ? "0" : "1"); return !v; })} title="Swap left and right panels" aria-label="Swap panels"><PanelLeft className="size-4" /></Button>
         <ThemeToggle />
         <div className="hidden -space-x-2 sm:flex">
           {room.peers.map((p) => (
@@ -720,7 +721,7 @@ function EditorPage() {
       <div className="flex min-h-0 flex-1">
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside className={`${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-12 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
+        <aside className={`${swap ? "xl:order-first xl:border-l-0 xl:border-r" : ""} ${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-10 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-2 grid grid-cols-5">
@@ -886,7 +887,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside className="order-first hidden w-56 shrink-0 flex-col overflow-y-auto border-r bg-sidebar p-2 md:flex xl:w-60">
+        <aside className={`${swap ? "order-last border-l" : "order-first border-r"} hidden w-56 shrink-0 flex-col overflow-y-auto bg-sidebar p-2 md:flex xl:w-60`}>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
             <DropdownMenu>
