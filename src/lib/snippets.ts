@@ -94,7 +94,7 @@ export const snippetsFor = (kind: SnippetKind, type: BlockType) => SNIPPETS[kind
 export const snippet = (kind: SnippetKind, name: string) => SNIPPETS[kind].find((s) => s.name === name)!.code;
 
 /** Premade look for freshly added blocks, so palette blocks feel as finished as template blocks. */
-export const PRESETS: Record<BlockType, { css?: string[]; js?: string[]; html?: string[] }> = {
+export const PRESETS: Partial<Record<BlockType, { css?: string[]; js?: string[]; html?: string[] }>> = {
   navbar: { css: ["Frosted glass", "Pill buttons", "Underline links"], js: ["Shrink on scroll"] },
   hero: { css: ["Fade in", "Pill buttons"], js: ["Typewriter heading"] },
   heading: { css: ["Gradient text"], js: ["Reveal on scroll"] },
@@ -118,7 +118,7 @@ export const PRESETS: Record<BlockType, { css?: string[]; js?: string[]; html?: 
 };
 
 export function presetFor(type: BlockType): { css: string; script: string; html: string } {
-  const p = PRESETS[type];
+  const p = PRESETS[type] ?? {};
   const join = (k: SnippetKind, names?: string[]) => (names ?? []).map((n) => snippet(k, n)).join("\n");
   return { css: join("css", p.css), script: join("js", p.js), html: join("html", p.html) };
 }

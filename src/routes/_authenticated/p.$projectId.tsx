@@ -33,7 +33,7 @@ import { SITE_TEMPLATES, blocksToViews, templatePageCount, templateViews, type S
 import { SitePreview } from "@/components/SitePreview";
 import { openSandboxed, downloadSiteZip } from "@/lib/sandbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isContainer, isFlow, absolutizeMedia, type BoxOpts } from "@/lib/blocks";
+import { SHAPES, ANIMS, styleObj, type ShapeKey, type AnimKey, isContainer, isFlow, absolutizeMedia, type BoxOpts } from "@/lib/blocks";
 import { presetFor } from "@/lib/snippets";
 import { MediaPanel, AttrsPanel, SnippetsPanel } from "@/components/editor/BlockPanels";
 import { DeployDialog } from "@/components/editor/DeployDialog";
@@ -156,6 +156,8 @@ function EditorPage() {
   const [bp, setBp] = useState<Breakpoint>("desktop");
   const [selected, setSelected] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [swap, setSwap] = useState(false);
+  useEffect(() => { setSwap(localStorage.getItem("wc-swap") === "1"); }, []);
   const [tplOpen, setTplOpen] = useState(false);
   const [hostOpen, setHostOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
@@ -640,7 +642,7 @@ function EditorPage() {
 
   return (
     <div className="editor-workspace flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-12 xl:py-0">
+      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-10 xl:py-0 [&_button]:h-7">
         <Button variant="ghost" size="icon" asChild><Link to="/projects" aria-label="Back to projects"><ArrowLeft /></Link></Button>
         <span className="min-w-0 truncate font-display text-sm font-semibold xl:max-w-40">{info?.project?.name ?? "…"}</span>
         <Button size="sm" variant={chatOpen ? "secondary" : "outline"} onClick={() => openChat()} className="relative ml-auto" aria-label="Open team chat">
@@ -703,6 +705,7 @@ function EditorPage() {
             </div>
           </PopoverContent>
         </Popover>}
+        <Button size="icon" variant="ghost" className="size-7" onClick={() => setSwap((v) => { localStorage.setItem("wc-swap", v ? "0" : "1"); return !v; })} title="Swap left and right panels" aria-label="Swap panels"><PanelLeft className="size-4" /></Button>
         <ThemeToggle />
         <div className="hidden -space-x-2 sm:flex">
           {room.peers.map((p) => (
@@ -720,7 +723,7 @@ function EditorPage() {
       <div className="flex min-h-0 flex-1">
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside className={`${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-12 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
+        <aside className={`${swap ? "xl:order-first xl:border-l-0 xl:border-r" : ""} ${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-10 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-2 grid grid-cols-5">
@@ -886,7 +889,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside className="order-first hidden w-56 shrink-0 flex-col overflow-y-auto border-r bg-sidebar p-2 md:flex xl:w-60">
+        <aside className={`${swap ? "order-last border-l" : "order-first border-r"} hidden w-56 shrink-0 flex-col overflow-y-auto bg-sidebar p-2 md:flex xl:w-60`}>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
             <DropdownMenu>
@@ -1186,7 +1189,12 @@ function Inspector(props: {
   const fields: { f: "text" | "sub" | "label"; label: string }[] = [];
   if (def.text) fields.push({ f: "text", label: node.type === "image" ? "Alt text / caption" : node.type === "cards" || node.type === "pricing" ? "Titles (separate with |)" : node.type === "input" ? "Field label" : isContainer(node.type) && node.type !== "section" ? "Items (separate with |)" : "Text" });
   if (def.sub) fields.push({ f: "sub", label: node.type === "pricing" ? "Prices (separate with |)" : node.type === "cards" ? "Descriptions (separate with |)" : node.type === "input" ? "Placeholder" : "Secondary text" });
-  if (def.label) fields.push({ f: "label", label: "Button label" });
+  if (def.label) fields.push({ f: "label", label: node.type === "stats" ? "Changes (separate with |)" : "Button label" });
+  if (node.type === "chart") { fields[0] = { f: "text", label: "Labels (separate with |)" }; fields[1] = { f: "sub", label: "Values (separate with |)" }; }
+  if (node.type === "stats") { fields[0] = { f: "text", label: "Metric names (separate with |)" }; fields[1] = { f: "sub", label: "Values (separate with |)" }; }
+  if (node.type === "product") { fields[0] = { f: "text", label: "Product name" }; fields[1] = { f: "sub", label: "Price (number)" }; }
+  if (node.type === "cart") fields[1] = { f: "sub", label: "Empty-cart message" };
+  const setAttr = (k: string, v: string) => props.onAttrs({ ...node.attrs, [k]: v });
 
   const color = (k: "bg" | "color" | "btn" | "border", label: string) => (
     <label className="flex items-center justify-between gap-2 text-xs">
@@ -1198,7 +1206,7 @@ function Inspector(props: {
       </span>
     </label>
   );
-  const range = (k: "radius" | "pad" | "opacity" | "scale", label: string, min: number, max: number, step: number, dflt: number) => (
+  const range = (k: "radius" | "pad" | "opacity" | "scale" | "rotate" | "animDur" | "animDelay", label: string, min: number, max: number, step: number, dflt: number) => (
     <label className="block text-xs">
       <span className="flex justify-between">{label}<span className="text-muted-foreground">{st[k] ?? dflt}</span></span>
       <input type="range" min={min} max={max} step={step} disabled={disabled} defaultValue={st[k] ?? dflt} key={String(st[k] ?? dflt)}
@@ -1230,7 +1238,7 @@ function Inspector(props: {
             onCommit={(v) => props.onEdit(f, v)} />
         </div>
       ))}
-      {["button", "navbar", "hero", "pricing", "login", "register"].includes(node.type) && (
+      {["button", "navbar", "hero", "pricing", "login", "register", "product", "cart"].includes(node.type) && (
         <div className="space-y-2 border-t pt-4">
           <Label>Button destination</Label>
           <select aria-label="Button destination type" disabled={disabled} value={node.href.startsWith("?page=") ? "page" : "url"}
@@ -1247,6 +1255,27 @@ function Inspector(props: {
           <p className="text-xs text-muted-foreground">Paste your payment provider's checkout link, or select a project page. Sign-in and sign-up blocks also need a destination; they do not create user accounts.</p>
         </div>
       )}
+      {node.type === "chart" && (
+        <div className="space-y-2 border-t pt-4">
+          <Label>Chart type</Label>
+          <div className="grid grid-cols-5 gap-1">
+            {["bar", "line", "area", "pie", "donut"].map((k) => (
+              <button key={k} disabled={disabled} onClick={() => setAttr("data-chart", k)} className={`rounded border px-1 py-1 text-[11px] capitalize ${(node.attrs["data-chart"] ?? "bar") === k ? "border-primary bg-primary/10" : ""}`}>{k}</button>
+            ))}
+          </div>
+          <Input aria-label="Chart title" placeholder="Chart title" disabled={disabled} defaultValue={node.attrs["data-title"] ?? ""} key={node.id + "t"} onBlur={(e) => setAttr("data-title", e.target.value)} />
+          <p className="text-xs text-muted-foreground">Color follows the Button color in Style.</p>
+        </div>
+      )}
+      {node.type === "product" && (
+        <div className="space-y-2 border-t pt-4">
+          <Label>Store</Label>
+          <Input aria-label="Currency symbol" placeholder="Currency symbol, e.g. $ or ₱" disabled={disabled} defaultValue={node.attrs["data-currency"] ?? "$"} key={node.id + "c"} onBlur={(e) => setAttr("data-currency", e.target.value.slice(0, 4))} />
+          <Input aria-label="Product image URL" placeholder="Image URL (https://…)" disabled={disabled} defaultValue={node.attrs["data-image"] ?? ""} key={node.id + "i"} onBlur={(e) => setAttr("data-image", e.target.value.trim())} />
+          <p className="text-xs text-muted-foreground">"Add to cart" fills any Cart block on the site. A destination link above adds a "Buy now" button (e.g. a Stripe Payment Link).</p>
+        </div>
+      )}
+      {node.type === "cart" && <p className="border-t pt-4 text-xs text-muted-foreground">Set the destination to your Stripe or PayPal payment link. PayPal.me links get the cart total added automatically.</p>}
       {isContainer(node.type) && (
         <BoxPanel type={node.type} box={node.box} disabled={disabled} onBox={props.onBox} />
       )}
@@ -1282,6 +1311,28 @@ function Inspector(props: {
                 className={`rounded px-2 py-0.5 capitalize ${st.font === a ? "bg-secondary font-medium" : "text-muted-foreground"}`}>{a}</button>
             ))}
           </div>
+        </div>
+        <div className="space-y-1.5 border-t pt-3 text-xs">
+          <span className="block font-medium">Shape</span>
+          <div className="grid grid-cols-7 gap-1">
+            {(Object.keys(SHAPES) as ShapeKey[]).map((k) => (
+              <button key={k} disabled={disabled} title={SHAPES[k].label} aria-label={SHAPES[k].label} onClick={() => props.onStyle("shape", k === "rect" ? null : k)}
+                className={`grid aspect-square place-items-center rounded border ${(st.shape ?? "rect") === k ? "border-primary bg-primary/10" : "hover:bg-secondary"}`}>
+                <span className="block size-4 bg-primary/70" style={styleObj({ shape: k })} />
+              </button>
+            ))}
+          </div>
+          <Input aria-label="Custom clip path" placeholder="Custom: polygon(0 0, 100% 0, 80% 100%, 0 100%)" disabled={disabled} defaultValue={st.clip ?? ""} key={node.id + (st.clip ?? "")}
+            onBlur={(e) => props.onStyle("clip", e.target.value.trim() || null)} className="h-8 font-mono text-[11px]" />
+          {range("rotate", "Rotation (°)", -180, 180, 1, 0)}
+        </div>
+        <div className="space-y-1.5 border-t pt-3 text-xs">
+          <span className="block font-medium">Animation</span>
+          <select aria-label="Animation" disabled={disabled} value={st.anim ?? ""} onChange={(e) => props.onStyle("anim", e.target.value || null)} className="h-8 w-full rounded-md border bg-background px-2">
+            <option value="">None</option>
+            {(Object.keys(ANIMS) as AnimKey[]).map((k) => <option key={k} value={k}>{ANIMS[k]}</option>)}
+          </select>
+          {st.anim && <>{range("animDur", "Duration (s)", 0.2, 6, 0.1, 0.8)}{range("animDelay", "Delay (s)", 0, 3, 0.1, 0)}</>}
         </div>
         <label className="flex items-center justify-between text-xs">
           Drop shadow
