@@ -33,7 +33,7 @@ import { SITE_TEMPLATES, blocksToViews, templatePageCount, templateViews, type S
 import { SitePreview } from "@/components/SitePreview";
 import { openSandboxed, downloadSiteZip } from "@/lib/sandbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isContainer, isFlow, absolutizeMedia, type BoxOpts } from "@/lib/blocks";
+import { SHAPES, ANIMS, styleObj, type ShapeKey, type AnimKey, isContainer, isFlow, absolutizeMedia, type BoxOpts } from "@/lib/blocks";
 import { presetFor } from "@/lib/snippets";
 import { MediaPanel, AttrsPanel, SnippetsPanel } from "@/components/editor/BlockPanels";
 import { DeployDialog } from "@/components/editor/DeployDialog";
