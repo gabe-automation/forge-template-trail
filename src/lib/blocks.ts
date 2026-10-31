@@ -2,7 +2,7 @@ export type BlockType =
   | "navbar" | "hero" | "heading" | "text" | "button" | "image" | "cards"
   | "pricing" | "testimonial" | "login" | "register" | "divider" | "footer"
   | "input" | "flex" | "grid" | "stack" | "absolute" | "section" | "video"
-  | "chart" | "stats" | "product" | "cart";
+  | "chart" | "stats" | "product" | "cart" | "element" | "table" | "progress";
 
 export const CONTAINER_TYPES: BlockType[] = ["flex", "grid", "stack", "absolute", "section"];
 export const isContainer = (t: BlockType) => CONTAINER_TYPES.includes(t);
@@ -101,6 +101,9 @@ export const BLOCKS: Record<BlockType, BlockDef> = {
   stats: { name: "Dashboard stats", w: 1080, h: 140, text: "Revenue|Visitors|Orders|Conversion", sub: "$12.4k|8,204|318|3.9%", label: "+12%|+4%|-2%|+0.6%" },
   product: { name: "Product", w: 300, h: 420, text: "Linen tote bag", sub: "24.00", label: "Add to cart" },
   cart: { name: "Cart & checkout", w: 380, h: 320, text: "Your cart", sub: "Your cart is empty.", label: "Checkout" },
+  element: { name: "Element", w: 180, h: 48, text: "Text", sub: "", label: "" },
+  table: { name: "Data table", w: 720, h: 260, text: "Product|Status|Sales", sub: "Linen tote|Active|318\nCanvas bag|Active|204", label: "" },
+  progress: { name: "Progress", w: 380, h: 90, text: "Monthly target", sub: "72", label: "" },
 };
 
 export type Theme = { primary: string; accent: string; surface: string; ink: string };
@@ -149,6 +152,15 @@ export function blockHtml(type: BlockType, c: BlockContent, id: string): string 
   const nt = c.attrs?.["data-new-tab"] === "true" && /^https?:/i.test(href) ? ` target="_blank" rel="noopener"` : "";
   const action = (label: string) => href ? `<a class="wc-btn" href="${href}"${nt}>${label}</a>` : `<span class="wc-btn wc-btn-unset" title="Set a destination in WebCraft">${label}</span>`;
   switch (type) {
+    case "element": {
+      if (c.attrs?.["data-atomic"] === "true") return "";
+      const tag = c.attrs?.["data-tag"] ?? "span";
+      const safe = /^(h[1-6]|p|span|strong|em|small|a|button|label|li|div|footer|figcaption)$/.test(tag) ? tag : "span";
+      const classes = esc((c.attrs?.["data-class"] ?? "").replace(/[^\w\s-]/g, ""));
+      return `<${safe} class="wc-part ${classes}"${safe === "a" && href ? ` href="${href}"` : ""}${safe === "button" ? ' type="button"' : ""}>${t}</${safe}>`;
+    }
+    case "table": return `<div style="height:100%;overflow:auto"><table style="width:100%;border-collapse:collapse;font:14px system-ui"><thead><tr>${split(c.text).map(x => `<th style="text-align:left;padding:12px;border-bottom:1px solid currentColor">${esc(x)}</th>`).join("")}</tr></thead><tbody>${c.sub.split("\n").map(row => `<tr>${split(row).map(x => `<td style="padding:12px;border-bottom:1px solid color-mix(in srgb,var(--wc-ink) 15%,transparent)">${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    case "progress": return `<label style="display:grid;gap:12px;padding:16px;font:14px system-ui">${t}<progress max="100" value="${Math.max(0, Math.min(100, Number(c.sub) || 0))}" style="width:100%;accent-color:var(--wc-primary)"></progress></label>`;
     case "navbar":
     {
       const links = (c.attrs?.["data-links"] ?? "").split("|").map((x) => safeHref(x));
@@ -214,7 +226,7 @@ export function blockHtml(type: BlockType, c: BlockContent, id: string): string 
       const img = mediaUrl(c.attrs?.["data-image"]);
       const cur = esc(c.attrs?.["data-currency"] || "$");
       const price = Number.parseFloat(c.sub) || 0;
-      return `<article class="wc-product" data-wc-product="${esc(id)}" data-name="${t}" data-price="${price.toFixed(2)}" data-currency="${cur}">${img ? `<img src="${esc(img)}" alt="${t}">` : `<div class="wc-image-art" role="img" aria-label="${t}"></div>`}<h3>${t}</h3><p class="wc-product-price">${cur}${price.toFixed(2)}</p>${href ? `<a class="wc-btn" href="${href}"${nt}>Buy now</a>` : ""}<button type="button" class="wc-btn wc-add">${l}</button></article>`;
+      return `<article class="wc-product" data-wc-product="${esc(c.attrs?.["data-product-id"] || id)}" data-name="${t}" data-price="${price.toFixed(2)}" data-currency="${cur}">${img ? `<img src="${esc(img)}" alt="${t}">` : `<div class="wc-image-art" role="img" aria-label="${t}"></div>`}<h3>${t}</h3><p class="wc-product-price">${cur}${price.toFixed(2)}</p>${href ? `<a class="wc-btn" href="${href}"${nt}>Buy now</a>` : ""}<button type="button" class="wc-btn wc-add">${l}</button></article>`;
     }
     case "cart":
       return `<section class="wc-cart" data-wc-cart data-checkout="${href}"><h3>${t}</h3><ul class="wc-cart-items"></ul><p class="wc-cart-empty">${s}</p><p class="wc-cart-total">Total <strong>0.00</strong></p>${action(l).replace("wc-btn", "wc-btn wc-checkout")}</section>`;

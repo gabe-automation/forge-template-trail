@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Code2, Copy } from "lucide-react";
+import { Code2, Copy, Lock, Unlock } from "lucide-react";
+import { LockControl } from "./LockControl";
+import { nodeBlocked } from "@/lib/nodeAccess";
 import { BLOCKS, BLOCK_CSS, BREAKPOINTS, blockHtml, isContainer, isFlow, isPanel, panelCss, panelClass, sanitizeHtml, scopeCss, styleObj, themeVars, type BlockType, type Breakpoint, type Theme } from "@/lib/blocks";
 import { blockSnippet, pageHeight, type Geo, type NodeView } from "@/lib/model";
 import type { Cursor, Lease, NodeLock } from "@/lib/useRoom";
@@ -30,6 +32,9 @@ type Props = {
   onCursor: (x: number, y: number) => void;
   onDropBlock: (type: BlockType, x: number, y: number, parentId?: string) => void;
   onReorder: (id: string, beforeId: string | null) => void;
+  multiSelected?: string[];
+  onMultiSelect?: (id: string) => void;
+  lockControls: { myId: string; isOwner: boolean; members: { id: string; name: string; color: string }[]; onSet: (id: string, mode: NodeLock["mode"] | null, allowed: string[]) => Promise<boolean> };
 };
 
 /** "a:b;c-d:e" → React style object. */
@@ -48,6 +53,9 @@ const SNAP = 6;
 export function Canvas(p: Props) {
   const readOnlyRef = useRef(p.readOnly);
   readOnlyRef.current = p.readOnly;
+  const accessRef = useRef(p);
+  accessRef.current = p;
+  const blocked = (id: string) => nodeBlocked(id, accessRef.current.leases, accessRef.current.locks, accessRef.current.mySession, accessRef.current.canOverride);
   const pageW = BREAKPOINTS[p.bp].width;
   const pageH = pageHeight(p.nodes, p.bp);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -169,7 +177,9 @@ export function Canvas(p: Props) {
   function startDrag(e: React.PointerEvent, n: NodeView, resizing: boolean) {
     if (p.readOnly || e.button !== 0) return;
     e.stopPropagation();
+    if (e.shiftKey && p.onMultiSelect) { p.onMultiSelect(n.id); return; }
     p.onSelect(n.id);
+    if (blocked(n.id)) return;
     const nl = p.locks[n.id];
     if (nl && !p.canOverride(nl)) return;
     const start = toPage(e);
@@ -188,7 +198,7 @@ export function Canvas(p: Props) {
         window.removeEventListener("pointerup", done);
         el.style.opacity = "";
         setDropTarget(null);
-         if (!dragged || readOnlyRef.current) return;
+         if (!dragged || readOnlyRef.current || blocked(n.id)) return;
         const row = getComputedStyle(box).flexDirection === "row" && getComputedStyle(box).display === "flex";
         const grid = getComputedStyle(box).display === "grid";
         const sibs = [...box.querySelectorAll<HTMLElement>(":scope > [data-node]")].filter((x) => x !== el);
@@ -208,7 +218,7 @@ export function Canvas(p: Props) {
     let last = orig;
     let moved = false;
     const move = (ev: PointerEvent) => {
-      if (readOnlyRef.current) return;
+      if (readOnlyRef.current || blocked(n.id)) return;
       const cur = toPage(ev);
       let dx = cur.x - start.x, dy = cur.y - start.y;
       if (!resizing && p.prefs.axis === "x") dy = 0;
@@ -226,7 +236,7 @@ export function Canvas(p: Props) {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       setGuides({ x: [], y: [] });
-      if (moved && !readOnlyRef.current) {
+      if (moved && !readOnlyRef.current && !blocked(n.id)) {
         p.onLiveDrag(n.id, last, true);
         p.onCommit(n.id, last, resizing ? "resized" : "moved");
       }
@@ -243,7 +253,7 @@ export function Canvas(p: Props) {
     const lockedByOther = lease && lease.holder_session !== p.mySession;
     const nl = p.locks[n.id];
     const pinned = !!nl && !p.canOverride(nl);
-    const isSel = p.selected === n.id;
+    const isSel = p.selected === n.id || !!p.multiSelected?.includes(n.id);
     const kids = childMap.get(n.id) ?? [];
     const container = isContainer(n.type);
     const panel = isPanel(n.type);
@@ -270,21 +280,22 @@ export function Canvas(p: Props) {
         {!panel && (
           <div
             className="pointer-events-none h-full w-full overflow-hidden group-hover:outline group-hover:outline-1 group-hover:outline-[var(--ring)]"
+            data-block-content
             style={ownStyle}
             dangerouslySetInnerHTML={{ __html: blockHtml(n.type, n, n.id) + custom }}
           />
         )}
         {panel && custom && <div className="pointer-events-none" dangerouslySetInnerHTML={{ __html: custom }} />}
-        <button
+        <Button size="icon" variant="outline"
           type="button"
           aria-label={`View code of ${BLOCKS[n.type].name}`}
           title="View code"
-          className="absolute right-1.5 top-1.5 z-30 grid size-6 place-items-center rounded-md border bg-card/95 text-foreground opacity-0 shadow-sm transition hover:border-primary focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute right-1.5 top-1.5 z-30 size-7 bg-card/95 text-foreground opacity-100 shadow-sm transition sm:opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); setPeekId(n.id); }}
         >
           <Code2 className="size-3" />
-        </button>
+        </Button>
         {container && kids.length === 0 && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center">
             <span className="text-center font-sans text-[11px] italic text-muted-foreground/80">
@@ -373,16 +384,18 @@ export function Canvas(p: Props) {
           ),
         )}
       </div>
-      {peekNode && <CodePeek node={peekNode} nodes={p.nodes} onClose={() => setPeekId(null)} />}
+      {peekNode && <CodePeek node={peekNode} nodes={p.nodes} lock={p.locks[peekNode.id]} controls={p.lockControls} readOnly={p.readOnly} onClose={() => setPeekId(null)} />}
     </div>
   );
 }
 
 /** Tiny floating code viewer: the exact HTML / CSS / script WebCraft exports for one block. */
-function CodePeek({ node, nodes, onClose }: { node: NodeView; nodes: NodeView[]; onClose: () => void }) {
+function CodePeek({ node, nodes, lock, controls, readOnly, onClose }: { node: NodeView; nodes: NodeView[]; lock: NodeLock | undefined; controls: Props["lockControls"]; readOnly: boolean; onClose: () => void }) {
   const s = blockSnippet(node, nodes);
   const [tab, setTab] = useState<"html" | "css" | "js">("html");
   const val = s[tab];
+  const [permissions, setPermissions] = useState(false);
+  const manage = !readOnly && (!lock || lock.locked_by === controls.myId || controls.isOwner);
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
@@ -391,17 +404,20 @@ function CodePeek({ node, nodes, onClose }: { node: NodeView; nodes: NodeView[];
           <DialogDescription>The code WebCraft exports for this block — what you see is exactly what ships on the live site.</DialogDescription>
         </DialogHeader>
         <Tabs value={tab} onValueChange={(v) => setTab(v as "html" | "css" | "js")} className="min-w-0">
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <TabsList className="h-8">
               <TabsTrigger value="html" className="text-xs">HTML</TabsTrigger>
               <TabsTrigger value="css" className="text-xs">CSS</TabsTrigger>
               <TabsTrigger value="js" className="text-xs">Script</TabsTrigger>
             </TabsList>
+            <Button size="icon" variant={lock ? "secondary" : "ghost"} className="size-8" disabled={!manage} aria-label={lock ? "Unlock block" : "Lock block"} title={lock ? "Unlock block" : "Lock block"} onClick={() => controls.onSet(node.id, lock ? null : "full", [])}>{lock ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}</Button>
+            <Button variant="ghost" size="sm" onClick={() => setPermissions(v => !v)}>Permissions</Button>
             <Button size="icon" variant="ghost" className="ml-auto size-8" aria-label="Copy code"
               onClick={() => navigator.clipboard.writeText(val).then(() => toast.success("Code copied"))}>
               <Copy className="size-3.5" />
             </Button>
           </div>
+          {permissions && <LockControl key={`${node.id}-${JSON.stringify(lock)}`} lock={lock} myId={controls.myId} isOwner={controls.isOwner} readOnly={readOnly} members={controls.members} onSet={(mode, allowed) => controls.onSet(node.id, mode, allowed)} />}
           <pre className="mt-2 max-h-[45vh] min-w-0 overflow-auto whitespace-pre rounded-md bg-ink p-3 font-mono text-[11px] leading-relaxed text-paper">{val}</pre>
         </Tabs>
       </DialogContent>

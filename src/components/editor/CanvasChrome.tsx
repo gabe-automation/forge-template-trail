@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
 import { BLOCKS } from "@/lib/blocks";
 import type { NodeView } from "@/lib/model";
+import { Button } from "@/components/ui/button";
 
 export type MenuItem = { label: string; shortcut?: string; onClick: () => void; disabled?: boolean; danger?: boolean } | "sep";
 
@@ -52,8 +53,8 @@ export function ZoomHud({ zoom, onZoom, width, label }: { zoom: number; onZoom: 
 }
 
 /** Nested layer list, top of the page first — like Figma's Layers panel. */
-export function LayersTree({ views, selected, onSelect, onContext }: {
-  views: NodeView[]; selected: string | null; onSelect: (id: string) => void; onContext: (id: string, x: number, y: number) => void;
+export function LayersTree({ views, selected, multiSelected = [], onMultiSelect, onSelect, onContext }: {
+  views: NodeView[]; selected: string | null; multiSelected?: string[]; onMultiSelect?: (id: string) => void; onSelect: (id: string) => void; onContext: (id: string, x: number, y: number) => void;
 }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({});
   const ids = new Set(views.map((v) => v.id));
@@ -71,16 +72,17 @@ export function LayersTree({ views, selected, onSelect, onContext }: {
     const name = (v.text || v.label || "").trim().slice(0, 28);
     return (
       <li key={v.id}>
-        <div className={`flex items-center gap-1 rounded py-1 pr-1 text-xs ${selected === v.id ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+        <div className={`flex min-w-0 items-center gap-1 rounded py-1 pr-1 text-xs ${selected === v.id || multiSelected.includes(v.id) ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
           style={{ paddingLeft: 4 + depth * 12 }}
           onContextMenu={(e) => { e.preventDefault(); onContext(v.id, e.clientX, e.clientY); }}>
           {ch.length ? <button type="button" aria-label={open ? "Collapse" : "Expand"} className="shrink-0" onClick={() => setClosed((c) => ({ ...c, [v.id]: open }))}>
             {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
           </button> : <span className="w-3 shrink-0" />}
-          <button type="button" onClick={() => onSelect(v.id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left">
-            <span className="shrink-0 font-medium">{BLOCKS[v.type]?.name ?? v.type}</span>
+          {onMultiSelect && <input type="checkbox" className="size-3 shrink-0 accent-primary" aria-label={`Select ${BLOCKS[v.type]?.name} for grouping`} checked={multiSelected.includes(v.id)} onChange={() => onMultiSelect(v.id)} />}
+          <Button variant="ghost" size="sm" onClick={() => onSelect(v.id)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 text-xs">
+            <span className="truncate font-medium">{v.attrs["data-group"] === "true" ? "Group" : BLOCKS[v.type]?.name ?? v.type}</span>
             {name && <span className="truncate text-muted-foreground">{name}</span>}
-          </button>
+          </Button>
         </div>
         {ch.length > 0 && open && <ul>{ch.map((c) => row(c, depth + 1))}</ul>}
       </li>
