@@ -311,7 +311,7 @@ function EditorPage() {
     const id = crypto.randomUUID();
     const result = await room.op(id, { type: "absolute", parent: nodes[0]?.parent ?? null, page: page?.id, order: nodes[0]?.order, attrs: { "data-group": "true" }, ...geoProps(boxes) }, "created", "Group");
     if (result !== "ok") return;
-    for (const n of nodes) await room.op(n.id, { parent: id, ...geoProps(children[n.id]) }, "grouped", labelOf(n));
+    for (const n of nodes) { const child = children[n.id]; if (child) await room.op(n.id, { parent: id, ...geoProps(child) }, "grouped", labelOf(n)); }
     void select(id);
   }
   async function ungroup(n: NodeView) {

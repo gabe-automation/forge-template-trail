@@ -390,7 +390,7 @@ export function Canvas(p: Props) {
 }
 
 /** Tiny floating code viewer: the exact HTML / CSS / script WebCraft exports for one block. */
-function CodePeek({ node, nodes, lock, controls, readOnly, onClose }: { node: NodeView; nodes: NodeView[]; lock?: NodeLock; controls: Props["lockControls"]; readOnly: boolean; onClose: () => void }) {
+function CodePeek({ node, nodes, lock, controls, readOnly, onClose }: { node: NodeView; nodes: NodeView[]; lock: NodeLock | undefined; controls: Props["lockControls"]; readOnly: boolean; onClose: () => void }) {
   const s = blockSnippet(node, nodes);
   const [tab, setTab] = useState<"html" | "css" | "js">("html");
   const val = s[tab];

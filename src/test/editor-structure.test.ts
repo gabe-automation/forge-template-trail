@@ -7,12 +7,12 @@ import { chartRuntime } from "@/lib/exportRuntime";
 
 describe("Builder structure", () => {
   it("groups siblings without changing their positions across breakpoints", () => {
-    const nodes = blocksToViews([{ type: "text", x: 50, y: 40, w: 200, h: 80 }, { type: "button", x: 280, y: 140, w: 100, h: 40 }]);
+    const nodes = blocksToViews("group-test", [{ type: "text", x: 50, y: 40, w: 200, h: 80 }, { type: "button", x: 280, y: 140, w: 100, h: 40 }]);
     const { boxes, children } = groupingGeometry(nodes);
     expect(boxes.desktop).toEqual({ x: 50, y: 40, w: 330, h: 140 });
     for (const bp of ["desktop", "tablet", "mobile"] as const) for (const n of nodes) {
-      expect(children[n.id][bp].x + boxes[bp].x).toBe(n.geo[bp].x);
-      expect(children[n.id][bp].y + boxes[bp].y).toBe(n.geo[bp].y);
+      expect((children[n.id]?.[bp].x ?? NaN) + boxes[bp].x).toBe(n.geo[bp].x);
+      expect((children[n.id]?.[bp].y ?? NaN) + boxes[bp].y).toBe(n.geo[bp].y);
     }
     expect(geoProps(boxes)["w@desktop"]).toBe(330);
   });
@@ -30,7 +30,7 @@ describe("Builder structure", () => {
   it("updates an exported chart from custom code", () => {
     const el = document.createElement("div");
     el.id = "custom-chart";
-    el.dataset.chart = "line";
+    el.dataset["chart"] = "line";
     document.body.append(el);
     new Function(chartRuntime())();
     const api = (window as unknown as { WebCraft: { setChart: (id: string, rows: unknown[]) => void } }).WebCraft;

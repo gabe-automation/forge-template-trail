@@ -15,7 +15,9 @@ export function groupingGeometry(nodes: NodeView[]) {
     boxes[bp] = { x, y, w: right - x, h: bottom - y };
     for (const node of nodes) {
       children[node.id] ??= {} as Record<Breakpoint, Geo>;
-      children[node.id][bp] = { ...node.geo[bp], x: node.geo[bp].x - x, y: node.geo[bp].y - y };
+      const child = children[node.id];
+      if (!child) continue;
+      child[bp] = { ...node.geo[bp], x: node.geo[bp].x - x, y: node.geo[bp].y - y };
     }
   }
   return { boxes, children };
