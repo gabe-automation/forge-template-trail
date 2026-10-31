@@ -27,7 +27,9 @@ import { useSharedText, type SharedText } from "@/lib/sharedText";
 import { useChat } from "@/lib/useChat";
 import { useDragPrefs } from "@/lib/dragPrefs";
 import { DragSettings } from "@/components/editor/DragSettings";
-import { LockControl } from "@/components/editor/LockControl";
+import { IntegrationFields } from "@/components/editor/IntegrationFields";
+import { COMPOUND_TYPES, geoProps, groupingGeometry, splitRenderedBlock } from "@/lib/editorStructure";
+import { nodeBlocked } from "@/lib/nodeAccess";
 import type { NodeLock } from "@/lib/useRoom";
 import { SITE_TEMPLATES, blocksToViews, templatePageCount, templateViews, type SiteTemplate, type TplBlock } from "@/lib/siteTemplates";
 import { SitePreview } from "@/components/SitePreview";
@@ -156,8 +158,9 @@ function EditorPage() {
   const [bp, setBp] = useState<Breakpoint>("desktop");
   const [selected, setSelected] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [swap, setSwap] = useState(false);
-  useEffect(() => { setSwap(localStorage.getItem("wc-swap") === "1"); }, []);
+  const [assetsOpen, setAssetsOpen] = useState(false);
+  const [multiSelected, setMultiSelected] = useState<string[]>([]);
+  const selectionRef = useRef<string | null>(null);
   const [tplOpen, setTplOpen] = useState(false);
   const [hostOpen, setHostOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
@@ -216,14 +219,17 @@ function EditorPage() {
     const prev = heldRef.current;
     heldRef.current = null;
     if (prev) room.release(prev.id, prev.label);
+    selectionRef.current = id;
     setSelected(id);
-    if (id && !readOnly && window.innerWidth < 1280) setPanelOpen(true);
+    setMultiSelected(id ? [id] : []);
+
     room.setStatus(id && !readOnly ? "editing" : "watching");
-    if (!id || readOnly || !prefs.lockOnSelect) return;
+    if (!id || readOnly) return;
     const v = views.find((x) => x.id === id);
     if (!v) return;
     const label = labelOf(v);
     const ok = await room.acquire(id, label);
+    if (selectionRef.current !== id) { if (ok) void room.release(id, label); return; }
     if (ok) heldRef.current = { id, label };
     else toast.info(`${label} is locked by ${room.leases[id]?.holder_name ?? "a teammate"}. You can still edit anything else.`);
   }
@@ -281,6 +287,44 @@ function EditorPage() {
     if (copy || parent) select(id);
   }
 
+  const blockedNode = (id: string, geometry = true) => nodeBlocked(id, room.leases, room.locks, room.session, canOverride, geometry);
+  function multiSelect(id: string) {
+    setMultiSelected(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+  }
+  async function splitBlock(n: NodeView) {
+    if (readOnly || blockedNode(n.id)) return;
+    const root = document.querySelector<HTMLElement>(`[data-node="${n.id}"]`);
+    if (!root) return;
+    const parts = splitRenderedBlock(n, root, scale);
+    if (!parts.length) return;
+    const result = await room.op(n.id, { type: "absolute", attrs: { ...n.attrs, "data-group": "true", "data-original-type": n.type }, html: "", text: "", sub: "", label: "" }, "split", labelOf(n));
+    if (result !== "ok") return;
+    for (const part of parts) {
+      await room.op(part.id, { type: part.type, parent: part.parent, page: part.page, order: part.order, text: part.text, sub: "", label: "", href: part.href, attrs: part.attrs, html: part.html, css: part.css, ...geoProps(part.geo) }, "created", "Editable element");
+    }
+    setAssetsOpen(true);
+  }
+  async function groupNodes() {
+    const nodes = views.filter(n => multiSelected.includes(n.id));
+    if (nodes.length < 2 || readOnly || nodes.some(n => blockedNode(n.id)) || nodes.some(n => n.parent !== nodes[0]?.parent)) return;
+    const { boxes, children } = groupingGeometry(nodes);
+    const id = crypto.randomUUID();
+    const result = await room.op(id, { type: "absolute", parent: nodes[0]?.parent ?? null, page: page?.id, order: nodes[0]?.order, attrs: { "data-group": "true" }, ...geoProps(boxes) }, "created", "Group");
+    if (result !== "ok") return;
+    for (const n of nodes) await room.op(n.id, { parent: id, ...geoProps(children[n.id]) }, "grouped", labelOf(n));
+    void select(id);
+  }
+  async function ungroup(n: NodeView) {
+    const kids = views.filter(v => v.parent === n.id);
+    if (readOnly || blockedNode(n.id) || kids.some(v => blockedNode(v.id))) return;
+    for (const child of kids) {
+      const geo = Object.fromEntries((["desktop", "tablet", "mobile"] as const).map(bp => [bp, { ...child.geo[bp], x: child.geo[bp].x + n.geo[bp].x, y: child.geo[bp].y + n.geo[bp].y }])) as NodeView["geo"];
+      await room.op(child.id, { parent: n.parent, ...geoProps(geo) }, "ungrouped", labelOf(child));
+    }
+    await room.op(n.id, { deleted: true }, "deleted", "Group");
+    void select(null);
+  }
+
   /** Delete a block and everything nested inside it. */
   async function removeNode(id: string) {
     if (readOnly) return;
@@ -293,23 +337,27 @@ function EditorPage() {
     const queue = [id];
     const all: string[] = [];
     while (queue.length) {
-      const cur = queue.pop()!;
+      const cur = queue.pop();
+      if (!cur) continue;
       all.push(cur);
       for (const k of byParent.get(cur) ?? []) queue.push(k);
     }
+    if (all.some(n => blockedNode(n))) return;
     const label = labelOf(views.find((v) => v.id === id) ?? ({ type: "text", text: "" } as NodeView));
     await Promise.all(all.map((n) => room.op(n, { deleted: true }, "deleted", all.length > 1 ? `${label} (+${all.length - 1} inside)` : label)));
   }
 
   function commitGeo(id: string, g: Geo, kind: "moved" | "resized") {
-    if (readOnly) return;
+    if (readOnly || blockedNode(id)) return;
     const v = views.find((x) => x.id === id);
     if (!v) return;
     room.op(id, { [`x@${bp}`]: g.x, [`y@${bp}`]: g.y, [`w@${bp}`]: g.w, [`h@${bp}`]: g.h }, kind, labelOf(v));
   }
 
-  const selPin = sel && room.locks[sel.id] && !canOverride(room.locks[sel.id]!) ? room.locks[sel.id]! : null;
-  const selLockedBy = sel && room.leases[sel.id] && room.leases[sel.id]!.holder_session !== room.session ? room.leases[sel.id]!.holder_name
+  const selectedLock = sel ? room.locks[sel.id] : undefined;
+  const selectedLease = sel ? room.leases[sel.id] : undefined;
+  const selPin = selectedLock && !canOverride(selectedLock) ? selectedLock : null;
+  const selLockedBy = selectedLease && selectedLease.holder_session !== room.session ? selectedLease.holder_name
     : selPin?.mode === "full" ? `${selPin.locked_by_name} (locked)` : undefined;
 
   // keyboard: nudge, duplicate, delete
@@ -332,7 +380,7 @@ function EditorPage() {
   /** Change stacking order among siblings (later = on top). */
   function restack(id: string, dir: "front" | "back" | "up" | "down") {
     const n = views.find((v) => v.id === id);
-    if (!n || readOnly) return;
+    if (!n || readOnly || blockedNode(n.id)) return;
     const sibs = views.filter((v) => v.parent === n.parent && v.id !== id).sort((x, y) => (x.order < y.order ? -1 : 1));
     const all = views.filter((v) => v.parent === n.parent).sort((x, y) => (x.order < y.order ? -1 : 1));
     const cur = all.findIndex((v) => v.id === id);
@@ -371,7 +419,7 @@ function EditorPage() {
 
   function menuItems(id: string | null): MenuItem[] {
     const n = id ? views.find((v) => v.id === id) : undefined;
-    const locked = !!n && (n.id === sel?.id ? !!selLockedBy : false);
+    const locked = !!n && blockedNode(n.id);
     const off = readOnly || locked;
     const canvasOnly: MenuItem[] = [
       { label: "Paste here", shortcut: "Ctrl+V", onClick: paste, disabled: readOnly || !clipRef.current },
@@ -390,6 +438,11 @@ function EditorPage() {
       { label: "Bring forward", shortcut: "]", onClick: () => restack(n.id, "up"), disabled: off },
       { label: "Send backward", shortcut: "[", onClick: () => restack(n.id, "down"), disabled: off },
       { label: "Send to back", shortcut: "Ctrl+[", onClick: () => restack(n.id, "back"), disabled: off },
+      "sep",
+      { label: "Select for grouping", onClick: () => multiSelect(n.id), disabled: off },
+      { label: "Group selection", onClick: () => void groupNodes(), disabled: off || multiSelected.length < 2 },
+      { label: "Ungroup", onClick: () => void ungroup(n), disabled: off || n.attrs["data-group"] !== "true" },
+      { label: "Split into editable layers", onClick: () => void splitBlock(n), disabled: off || !COMPOUND_TYPES.includes(n.type) },
       "sep",
       { label: "Select parent", onClick: () => n.parent && select(n.parent), disabled: !n.parent },
       { label: "Edit properties", onClick: () => { select(n.id); setPanelOpen(true); } },
@@ -642,17 +695,18 @@ function EditorPage() {
 
   return (
     <div className="editor-workspace flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="editor-header grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-card px-2 py-1.5 xl:flex xl:h-10 xl:py-0 [&_button]:h-7">
+      <header className="editor-header grid h-11 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 border-b bg-card px-2 [&_button]:h-8">
         <Button variant="ghost" size="icon" asChild><Link to="/projects" aria-label="Back to projects"><ArrowLeft /></Link></Button>
         <span className="min-w-0 truncate font-display text-sm font-semibold xl:max-w-40">{info?.project?.name ?? "…"}</span>
-        <Button size="sm" variant={chatOpen ? "secondary" : "outline"} onClick={() => openChat()} className="relative ml-auto" aria-label="Open team chat">
+        <Button size="sm" variant={chatOpen ? "secondary" : "outline"} onClick={() => openChat()} className="relative" aria-label="Open team chat">
           <MessagesSquare className="size-4" /> <span className="hidden sm:inline">Chat</span>
           {chat.unread > 0 && !chatOpen && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{chat.unread}</span>}
         </Button>
-        <div className="col-span-3 flex min-w-0 items-center gap-2 overflow-x-auto [&>*]:shrink-0">
+        <div className="editor-tools col-span-3 flex min-w-0 items-center gap-1 overflow-x-auto border-b bg-card px-2 py-1.5 [&>*]:shrink-0">
+        <Button size="icon" variant={assetsOpen ? "secondary" : "ghost"} className="lg:hidden" aria-label="Pages, layers and assets" title="Pages, layers and assets" onClick={() => { setAssetsOpen(v => !v); setPanelOpen(false); }}><Layers className="size-4" /></Button>
         {readOnly && (
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={isMobile ? "Editing is only available on a larger screen" : undefined}>
-            {isMobile ? "View only on mobile" : "View only"}
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={isMobile ? "Your membership is view only" : undefined}>
+            View only
           </span>
         )}
         {page?.kind === "canvas" ? (
@@ -673,8 +727,8 @@ function EditorPage() {
         {page?.kind === "canvas" && !readOnly && (
           <Button size="sm" variant="outline" onClick={() => setTplOpen(true)}><LayoutTemplate className="size-4" /> <span className="hidden xl:inline">Templates</span></Button>
         )}
-        {page?.kind !== "chat" && !isMobile && (
-          <Button size="sm" variant={panelOpen ? "secondary" : "outline"} className="xl:hidden" onClick={() => setPanelOpen((o) => !o)} aria-label="Toggle settings panel"><PanelLeft className="size-4" /></Button>
+        {page?.kind !== "chat" && (
+          <Button size="sm" variant={panelOpen ? "secondary" : "outline"} className="xl:hidden" onClick={() => { setPanelOpen((o) => !o); setAssetsOpen(false); }} aria-label="Toggle properties panel" title="Properties"><PanelLeft className="size-4" /></Button>
         )}
         {page && page.kind !== "chat" && !readOnly && <DragSettings prefs={prefs} onChange={setPrefs} />}
         <Button size="sm" variant="outline" disabled={page?.kind !== "canvas"} onClick={previewSite} title="Preview website"><Eye className="size-4" /> <span className="hidden xl:inline">Preview</span></Button>
@@ -705,7 +759,7 @@ function EditorPage() {
             </div>
           </PopoverContent>
         </Popover>}
-        <Button size="icon" variant="ghost" className="size-7" onClick={() => setSwap((v) => { localStorage.setItem("wc-swap", v ? "0" : "1"); return !v; })} title="Swap left and right panels" aria-label="Swap panels"><PanelLeft className="size-4" /></Button>
+
         <ThemeToggle />
         <div className="hidden -space-x-2 sm:flex">
           {room.peers.map((p) => (
@@ -720,53 +774,20 @@ function EditorPage() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="mt-11 flex min-h-0 flex-1">
+        {(assetsOpen || panelOpen) && <div className="fixed inset-x-0 bottom-0 top-[5.5rem] z-30 bg-background/60 xl:hidden" onClick={() => { setAssetsOpen(false); setPanelOpen(false); }} />}
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside className={`${swap ? "xl:order-first xl:border-l-0 xl:border-r" : ""} ${panelOpen ? "fixed bottom-0 right-0 top-[6.75rem] z-40 xl:top-10 flex shadow-lift" : "hidden"} order-last w-[min(20rem,90vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-80 xl:shadow-none ${isMobile ? "!hidden" : ""}`}>
+        <aside aria-label="Properties" className={`${panelOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last w-[min(20rem,92vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-72 xl:shadow-none`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="m-2 grid grid-cols-5">
+            <TabsList className="m-2 grid grid-cols-4">
               <TabsTrigger value="inspect">Edit</TabsTrigger>
-              <TabsTrigger value="locks" className="gap-1">Locks{Object.keys(room.locks).length > 0 && <span className="rounded-full bg-warning/40 px-1 text-[10px]">{Object.keys(room.locks).length}</span>}</TabsTrigger>
+
               <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="code">Code</TabsTrigger>
               <TabsTrigger value="team">Team</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="locks" className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
-              <p className="px-1 pb-2 text-xs text-muted-foreground">Who locked what. Select any block or whiteboard item, then use the lock buttons in Edit (or on the whiteboard toolbar) to pin or lock it.</p>
-              {Object.values(room.locks).length === 0 && <p className="p-3 text-sm text-muted-foreground">Nothing is locked right now.</p>}
-              <ul className="space-y-1.5">
-                {Object.values(room.locks).map((l) => {
-                  const pr = room.nodes[l.node_id];
-                  const isWb = pr && val<string>(pr, "kind", "") === "wb";
-                  const name = pr ? (isWb ? `Whiteboard ${val<string>(pr, "shape", "item")}` : BLOCKS[val<BlockType>(pr, "type", "text")]?.name ?? "Block") : "Deleted item";
-                  const txt = pr ? (shared.has(`${l.node_id}:text`) ? shared.get(`${l.node_id}:text`) : val<string>(pr, "text", "")) : "";
-                  const locker = members.find((m) => m.id === l.locked_by);
-                  const mine = canOverride(l);
-                  return (
-                    <li key={l.node_id} className="rounded-md border bg-background p-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        {l.mode === "move" ? <Pin className="size-3.5 text-warning" /> : <Lock className="size-3.5 text-destructive" />}
-                        <span className="min-w-0 flex-1 truncate font-medium">{name}{txt ? ` “${txt.slice(0, 22)}”` : ""}</span>
-                        <span className="rounded-full px-1.5 text-[10px] font-medium text-primary-foreground" style={{ background: locker?.color ?? "#78716c" }}>{l.mode === "move" ? "Pinned" : "Locked"}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        By <strong className="text-foreground">{l.locked_by === user.id ? "you" : l.locked_by_name}</strong>
-                        {l.allowed.length > 0 && <> · also allowed: {l.allowed.map(nameOf).join(", ")}</>}
-                        {mine ? " · you can edit" : l.mode === "move" ? " · you can edit text, not move" : " · you can't change it"}
-                      </p>
-                      <div className="mt-1.5 flex gap-1">
-                        {pr && <Button size="sm" variant="ghost" className="h-7" onClick={() => jumpTo({ node_id: l.node_id } as Activity)}><Crosshair className="size-3" /> Show</Button>}
-                        {!readOnly && (l.locked_by === user.id || isOwner) && <Button size="sm" variant="ghost" className="h-7" onClick={() => room.setLock(l.node_id, null, [], name)}><Unlock className="size-3" /> Unlock</Button>}
-                        {!mine && <Button size="sm" variant="ghost" className="h-7" onClick={() => openChat(`@${(locker?.name ?? l.locked_by_name).replace(/\s+/g, "_")} could you unlock ${name}${txt ? ` “${txt.slice(0, 22)}”` : ""}? `)}><MessageSquarePlus className="size-3" /> Ask to unlock</Button>}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </TabsContent>
 
             <TabsContent value="inspect" className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
               {page?.kind === "whiteboard" ? (
@@ -781,11 +802,10 @@ function EditorPage() {
                 </div>
               ) : sel ? (
                 <>
-                <LockControl key={`lock-${sel.id}-${room.locks[sel.id]?.mode ?? "open"}`} lock={room.locks[sel.id]} myId={user.id} isOwner={isOwner} readOnly={readOnly} members={members}
-                  onSet={(mode, allowed) => room.setLock(sel.id, mode, allowed, labelOf(sel))} />
                 <Inspector
                   key={sel.id}
                   node={sel}
+                  onSplit={() => void splitBlock(sel)}
                   bp={bp}
                   shared={shared}
                   lockedBy={selLockedBy}
@@ -815,7 +835,7 @@ function EditorPage() {
               ) : (
                 <>
                   <ThemePanel theme={theme} readOnly={readOnly} onChange={saveTheme} />
-                  <LayersList views={views} leases={room.leases} session={room.session} onSelect={select} />
+
                 </>
               )}
             </TabsContent>
@@ -889,7 +909,8 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside className={`${swap ? "order-last border-l" : "order-first border-r"} hidden w-56 shrink-0 flex-col overflow-y-auto bg-sidebar p-2 md:flex xl:w-60`}>
+        <aside aria-label="Pages layers and assets" className={`${assetsOpen ? "fixed bottom-0 left-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-first w-[min(18rem,88vw)] shrink-0 flex-col overflow-y-auto border-r bg-sidebar p-2 lg:static lg:flex lg:w-52 lg:shadow-none xl:w-60`}>
+          <div className="flex justify-end lg:hidden"><Button size="icon" variant="ghost" aria-label="Close assets panel" onClick={() => setAssetsOpen(false)}><X className="size-4" /></Button></div>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
             <DropdownMenu>
@@ -939,7 +960,7 @@ function EditorPage() {
           {page?.kind === "canvas" && (
             <div className="mb-4 border-t pt-3">
               <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</p>
-              <LayersTree views={views} selected={selected} onSelect={(id) => select(id)} onContext={(id, x, y) => { select(id); setMenu({ x, y, id }); }} />
+              <LayersTree views={views} selected={selected} multiSelected={multiSelected} onMultiSelect={multiSelect} onSelect={(id) => select(id)} onContext={(id, x, y) => { setMenu({ x, y, id }); }} />
             </div>
           )}
           {page?.kind === "canvas" && !readOnly && (
@@ -949,21 +970,21 @@ function EditorPage() {
                 {(Object.keys(BLOCKS) as BlockType[]).map((t) => (
                   <button key={t} disabled={readOnly} draggable={!readOnly}
                     onDragStart={(e) => e.dataTransfer.setData("application/x-webcraft-block", t)}
-                    onClick={() => addBlock(t)}
+                    onClick={() => { void addBlock(t, undefined, undefined, sel && isContainer(sel.type) ? sel.id : undefined); setAssetsOpen(false); }}
                     className="flex flex-col items-center gap-1 rounded-md border bg-card px-1 py-2 text-[11px] hover:border-primary disabled:opacity-50">
                     <BlockGlyph type={t} />
                     {BLOCKS[t].name}
                   </button>
                 ))}
               </div>
-              <p className="mt-3 px-1 text-[11px] leading-relaxed text-muted-foreground">Click or drag onto the page — drop onto a Flex row, Grid, Stack, Absolute box or Section to nest the block inside it. Arrow keys nudge, Ctrl/Cmd+D duplicates, Delete removes.</p>
+
             </>
           )}
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Mobile page switcher (sidebars are hidden on small screens) */}
-          <div className="flex items-center gap-1 overflow-x-auto border-b bg-sidebar px-2 py-1.5 md:hidden">
+          <div className="flex items-center gap-1 overflow-x-auto border-b bg-sidebar px-2 py-1.5 lg:hidden">
             {pages.map((pg) => {
               const Icon = PAGE_ICON[pg.kind] ?? FileText;
               return (
@@ -996,7 +1017,7 @@ function EditorPage() {
             onContextMenu={(e) => {
               e.preventDefault();
               const id = (e.target as HTMLElement).closest<HTMLElement>("[data-node]")?.dataset["node"] ?? null;
-              if (id) select(id);
+
               setMenu({ x: e.clientX, y: e.clientY, id });
             }}
             onMouseLeave={() => room.setStatus(selected && !readOnly ? "editing" : "watching")}>
@@ -1004,11 +1025,12 @@ function EditorPage() {
               <p className="text-center text-muted-foreground">Loading page…</p>
             ) : (
               <>
-                {views.length === 0 && <p className="mb-4 text-center text-muted-foreground">{readOnly ? "Empty page" : "Blank page — add a Navbar and a Hero from the blocks panel on the right."}</p>}
+                {views.length === 0 && <p className="mb-4 text-center text-muted-foreground">{readOnly ? "Empty page" : "Blank page"}</p>}
                 <div className="relative mx-auto" style={{ width: BREAKPOINTS[bp].width * scale }}>
                 <p className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground"><span className="font-medium text-foreground">{page.title}</span> {BREAKPOINTS[bp].label} · {frameW ?? BREAKPOINTS[bp].width}px</p>
                 <Canvas nodes={views} bp={bp} theme={theme} scale={scale} selected={selected} mySession={room.session} leases={room.leases}
                   cursors={room.cursors} pageId={page.id} drags={room.drags} readOnly={readOnly} prefs={prefs} locks={room.locks} canOverride={canOverride} onSelect={select} onCommit={commitGeo}
+                  multiSelected={multiSelected} onMultiSelect={multiSelect} lockControls={{ myId: user.id, isOwner, members, onSet: (id, mode, allowed) => room.setLock(id, mode, allowed, "Block") }}
                   onLiveDrag={(id, g, done) => room.sendDrag({ id, bp, ...g, done })}
                   onCursor={(x, y) => room.sendCursor(x, y, page.id)}
                   onDropBlock={(t, x, y, parentId) => addBlock(t, { x, y }, undefined, parentId)}
@@ -1162,6 +1184,7 @@ function LayersList({ views, leases, session, onSelect }: { views: NodeView[]; l
 
 function Inspector(props: {
   node: NodeView;
+  onSplit: () => void;
   bp: Breakpoint;
   shared: SharedText;
   lockedBy?: string | undefined;
@@ -1231,6 +1254,8 @@ function Inspector(props: {
       ) : !props.readOnly && (
         <p className="flex items-center gap-2 rounded-md bg-success/10 px-3 py-2 text-xs"><Lock className="size-3.5" /> You hold the lock on this block. Others can't change it until you click away.</p>
       )}
+      {COMPOUND_TYPES.includes(node.type) && <Button variant="outline" size="sm" className="w-full" disabled={disabled} onClick={props.onSplit}><Layers className="size-4" /> Split into editable layers</Button>}
+      <IntegrationFields node={node} disabled={disabled} onAttrs={props.onAttrs} />
       {fields.map(({ f, label }) => (
         <div key={f} className="space-y-1.5">
           <Label>{label}</Label>
@@ -1288,7 +1313,7 @@ function Inspector(props: {
         <Label className="block">Style</Label>
         {color("bg", "Background")}
         {color("color", "Text color")}
-        {def.label && color("btn", "Button color")}
+        {color("btn", "Accent color")}
         {color("border", "Border")}
         {range("radius", "Corner radius", 0, 48, 1, 0)}
         {range("pad", "Padding", 0, 64, 2, 0)}

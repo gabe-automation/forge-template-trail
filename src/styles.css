@@ -192,6 +192,15 @@
 .landing-hero { background: var(--background); }
 .landing-title { font-size: 96px; line-height: 1.08; letter-spacing: 0; }
 .landing-scene { height: 280px; margin-top: 12px; }
+.editor-header { position: relative; z-index: 50; }
+.editor-tools { position: absolute; top: 100%; left: 0; right: 0; height: 44px; }
+.editor-workspace [data-node] { touch-action: none; }
+.editor-workspace [data-node] .wc-part { display: block; }
+@media (min-width: 1280px) {
+  .editor-header { grid-template-columns: auto minmax(0, 180px) auto minmax(0, 1fr); }
+  .editor-tools { position: static; grid-column: 4; border-bottom: 0; }
+  .editor-workspace > div.mt-11 { margin-top: 0; }
+}
 .landing-templates { background: var(--muted); }
 .landing-invitation {
   --foreground: var(--landing-background);
