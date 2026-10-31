@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { canEditOnDevice } from "@/lib/deviceAccess";
 
 describe("Device access", () => {
-  it("limits phone owners and editors to viewing", () => {
+  it("allows phone owners and editors to edit", () => {
     for (const width of [320, 390, 640, 767]) {
-      expect(canEditOnDevice(width, "owner")).toBe(false);
-      expect(canEditOnDevice(width, "editor")).toBe(false);
+      expect(canEditOnDevice(width, "owner")).toBe(true);
+      expect(canEditOnDevice(width, "editor")).toBe(true);
     }
   });
   it("retains editing for tablet owners and editors", () => {
