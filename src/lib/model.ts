@@ -1,5 +1,6 @@
 import { panelClass, BLOCKS, BLOCK_CSS, isFlow, isPanel, panelCss, scopeCss, BOX_KEYS, BREAKPOINTS, STYLE_KEYS, attrString, blockHtml, formatCss, type BoxOpts, styleCss, themeVars, esc, type BlockStyle, type BlockType, type Breakpoint, type Theme } from "./blocks";
 import { val, type Props } from "./crdt";
+import { chartRuntime } from "./exportRuntime";
 
 export type Geo = { x: number; y: number; w: number; h: number };
 export type NodeView = {
@@ -132,7 +133,8 @@ export function blockSnippet(n: NodeView, all: NodeView[]): { html: string; css:
   const inTree = new Set([n.id]);
   const queue = [n.id];
   while (queue.length) {
-    const cur = queue.pop()!;
+    const cur = queue.pop();
+    if (!cur) continue;
     for (const m of all) {
       if (m.parent !== cur || inTree.has(m.id)) continue;
       inTree.add(m.id);
@@ -222,7 +224,9 @@ const STORE_JS = `// Store — product "Add to cart" buttons and the cart & chec
 (function () {
   const KEY = "wc-cart";
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
-  const save = (items) => { localStorage.setItem(KEY, JSON.stringify(items)); render(); };
+  const save = (items) => { localStorage.setItem(KEY, JSON.stringify(items)); render(); document.dispatchEvent(new CustomEvent("webcraft:cart-changed", { detail: { items, total: items.reduce((sum, it) => sum + it.price * it.qty, 0) } })); };
+  window.WebCraft = window.WebCraft || {};
+  window.WebCraft.cart = { getItems: load, clear: () => save([]), add: item => { if (!item || !item.id || !Number.isFinite(Number(item.price)) || Number(item.price) < 0) return; const items = load(); const found = items.find(it => it.id === item.id); if (found) found.qty += 1; else items.push({ ...item, price: Number(item.price), qty: 1 }); save(items); } };
   function render() {
     const items = load();
     document.querySelectorAll("[data-wc-cart]").forEach((cart) => {
@@ -258,6 +262,9 @@ const STORE_JS = `// Store — product "Add to cart" buttons and the cart & chec
     }
     const checkout = event.target.closest(".wc-checkout");
     if (checkout && checkout.tagName === "A") {
+      const items = load();
+      const request = new CustomEvent("webcraft:checkout", { cancelable: true, bubbles: true, detail: { items, total: items.reduce((sum, it) => sum + it.price * it.qty, 0), destination: checkout.href } });
+      if (!checkout.dispatchEvent(request)) { event.preventDefault(); return; }
       const total = load().reduce((s, it) => s + it.price * it.qty, 0).toFixed(2);
       if (/paypal\\.me\\//i.test(checkout.href)) checkout.href = checkout.href.replace(/\\/[\\d.]+$/, "") + "/" + total;
     }
