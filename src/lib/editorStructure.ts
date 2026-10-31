@@ -1,4 +1,4 @@
-import { BLOCKS, type Breakpoint } from "./blocks";
+import { type Breakpoint } from "./blocks";
 import type { Geo, NodeView } from "./model";
 
 export const COMPOUND_TYPES = ["navbar", "hero", "cards", "pricing", "testimonial", "login", "register", "footer", "stats", "product", "cart", "image"];
@@ -46,6 +46,7 @@ export function splitRenderedBlock(node: NodeView, root: HTMLElement, scale: num
     const attrs = Object.fromEntries([...el.attributes].filter(a => /^(data-|aria-|name$|type$|placeholder$|value$|alt$|src$)/.test(a.name)).map(a => [a.name === "src" ? "data-image" : a.name, a.value]));
     attrs["data-tag"] = el.tagName.toLowerCase();
     attrs["data-class"] = el.getAttribute("class") ?? "";
+    if (atomic) attrs["data-atomic"] = "true";
     const geo = Object.fromEntries((["desktop", "tablet", "mobile"] as const).map(bp => {
       const ratio = node.geo[bp].w / node.geo.desktop.w;
       return [bp, { ...g, x: x * ratio, w: g.w * ratio }];
