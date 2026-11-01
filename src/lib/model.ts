@@ -103,7 +103,7 @@ function renderNodeEl(n: NodeView, indent: string, childrenOf: Map<string, NodeV
     .join("\n");
   const inner = blockHtml(n.type, n, shortId(n.id)) + (n.html.trim() ? `\n${indent}  ${n.html.trim()}` : "");
   const par = n.parent ? byId.get(n.parent) : undefined;
-  const cls = ["wc-el", isPanel(n.type) ? `wc-box wc-box-${n.type}${panelClass(n.type, n.box)}` : "", par && isFlow(par.type) ? "wc-flow" : ""].filter(Boolean).join(" ");
+  const cls = ["wc-el", n.type === "absolute" ? (n.attrs["data-class"] ?? "").replace(/[^\w\s-]/g, "") : "", isPanel(n.type) ? `wc-box wc-box-${n.type}${panelClass(n.type, n.box)}` : "", par && isFlow(par.type) ? "wc-flow" : ""].filter(Boolean).join(" ");
   return `${indent}<div class="${cls}" id="${shortId(n.id)}"${n.type === "input" ? attrString(Object.fromEntries(Object.entries(n.attrs).filter(([k]) => k.startsWith("data-hide-")))) : attrString(n.attrs)}>${inner ? `\n${indent}  ${inner}` : ""}${kids ? `\n${kids}` : ""}\n${indent}</div>`;
 }
 
@@ -231,6 +231,7 @@ const STORE_JS = `// Store — product "Add to cart" buttons and the cart & chec
     const items = load();
     document.querySelectorAll("[data-wc-cart]").forEach((cart) => {
       const list = cart.querySelector(".wc-cart-items");
+      if (!list) return;
       const cur = items[0]?.currency || "$";
       list.innerHTML = "";
       items.forEach((it, i) => {
@@ -243,8 +244,10 @@ const STORE_JS = `// Store — product "Add to cart" buttons and the cart & chec
         li.append(rm);
         list.append(li);
       });
-      cart.querySelector(".wc-cart-empty").hidden = items.length > 0;
-      cart.querySelector(".wc-cart-total strong").textContent = cur + items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2);
+      const empty = cart.querySelector(".wc-cart-empty");
+      if (empty) empty.hidden = items.length > 0;
+      const total = cart.querySelector(".wc-cart-total strong");
+      if (total) total.textContent = cur + items.reduce((s, it) => s + it.price * it.qty, 0).toFixed(2);
     });
   }
   document.addEventListener("click", (event) => {
@@ -252,6 +255,7 @@ const STORE_JS = `// Store — product "Add to cart" buttons and the cart & chec
     const add = event.target.closest(".wc-add");
     if (add) {
       const p = add.closest("[data-wc-product]");
+      if (!p) return;
       const items = load();
       const found = items.find((it) => it.id === p.dataset.wcProduct);
       if (found) found.qty += 1;

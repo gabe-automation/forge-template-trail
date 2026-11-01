@@ -265,7 +265,7 @@ export function Canvas(p: Props) {
       <div
         key={n.id}
         data-node={n.id}
-        className={`wc-el group${panel ? ` wc-box wc-box-${n.type}${panelClass(n.type, n.box)}` : ""}${inFlow ? " wc-flow" : ""}`}
+        className={`wc-el group ${n.type === "absolute" ? (n.attrs["data-class"] ?? "").replace(/[^\w\s-]/g, "") : ""}${panel ? ` wc-box wc-box-${n.type}${panelClass(n.type, n.box)}` : ""}${inFlow ? " wc-flow" : ""}`}
         style={{
           left: g.x, top: g.y, width: g.w, height: g.h, zIndex: z,
           ...(panel ? { ...cssObj(panelCss(n.type, n.box)), ...ownStyle } : {}),
@@ -324,7 +324,7 @@ export function Canvas(p: Props) {
         )}
         {isSel && !p.readOnly && !pinned && (
           <div
-            className="absolute -bottom-1.5 -right-1.5 z-10 size-3 cursor-se-resize rounded-sm border-2 border-primary bg-card"
+            className="absolute -bottom-2 -right-2 z-10 size-5 cursor-se-resize rounded-sm border-2 border-primary bg-card sm:-bottom-1.5 sm:-right-1.5 sm:size-3"
             onPointerDown={(e) => startDrag(e, n, true)}
           />
         )}
