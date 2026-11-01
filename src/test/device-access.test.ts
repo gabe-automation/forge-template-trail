@@ -2,14 +2,15 @@ import { describe, expect, it } from "vitest";
 import { canEditOnDevice } from "@/lib/deviceAccess";
 
 describe("Device access", () => {
-  it("allows phone owners and editors to edit", () => {
+  it("makes phones read-only for every membership", () => {
     for (const width of [320, 390, 640, 767]) {
-      expect(canEditOnDevice(width, "owner")).toBe(true);
-      expect(canEditOnDevice(width, "editor")).toBe(true);
+      for (const role of ["owner", "editor", "viewer", undefined]) {
+        expect(canEditOnDevice(width, role)).toBe(false);
+      }
     }
   });
   it("retains editing for tablet owners and editors", () => {
-    for (const width of [768, 820, 1024]) {
+    for (const width of [768, 820, 1024, 1280]) {
       expect(canEditOnDevice(width, "owner")).toBe(true);
       expect(canEditOnDevice(width, "editor")).toBe(true);
     }
