@@ -12,7 +12,8 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
-- [ ] Reorganize header and panels for desktop, tablet, and phone editing.
-- [ ] Make compound block content independently editable and support grouping/ungrouping.
-- [ ] Move selective locks to code peek and retain automatic collaboration locks.
-- [ ] Add portable chart/store code integration points and verify editor flows.
+- [x] Reorganize header and panels for desktop, tablet, and phone editing.
+- [x] Make compound block content independently editable and support grouping/ungrouping.
+- [x] Move selective locks to code peek and retain automatic collaboration locks.
+- [x] Add portable chart/store code integration points and unit-test exported behavior.
+- [ ] Verify signed-in editor flows at desktop/tablet/phone sizes — blocked: no matching account session; user must sign in to preview.

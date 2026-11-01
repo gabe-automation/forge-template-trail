@@ -49,7 +49,6 @@ export function DragSettings({ prefs, onChange }: { prefs: DragPrefs; onChange: 
         <div className="space-y-2 border-t pt-3">
           {check("guides", "Snap to other elements")}
           {check("frameCarry", "Frames carry their contents")}
-          {check("lockOnSelect", "Hold selected item while I edit")}
         </div>
         <p className="text-[11px] text-muted-foreground">Saved for you on this project. Hold Alt while dragging to ignore snapping.</p>
       </PopoverContent>
