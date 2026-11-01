@@ -236,7 +236,7 @@ function EditorPage() {
   useEffect(() => { select(null); }, [page?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function addBlock(type: BlockType, at?: { x: number; y: number }, copy?: NodeView, parentId?: string) {
-    if (!page || readOnly) return;
+    if (!page || readOnly || (parentId && blockedNode(parentId))) return;
     const def = BLOCKS[type];
     const id = crypto.randomUUID();
     const parent = parentId ? views.find((v) => v.id === parentId) : undefined;
@@ -298,7 +298,7 @@ function EditorPage() {
     const parts = splitRenderedBlock(n, root, scale);
     if (!parts.length) return;
     const result = await room.op(n.id, { type: "absolute", attrs: { ...n.attrs, "data-group": "true", "data-original-type": n.type }, html: "", text: "", sub: "", label: "" }, "split", labelOf(n));
-    if (result !== "ok") return;
+    if (result !== "applied") return;
     for (const part of parts) {
       await room.op(part.id, { type: part.type, parent: part.parent, page: part.page, order: part.order, text: part.text, sub: "", label: "", href: part.href, attrs: part.attrs, html: part.html, css: part.css, ...geoProps(part.geo) }, "created", "Editable element");
     }
@@ -310,7 +310,7 @@ function EditorPage() {
     const { boxes, children } = groupingGeometry(nodes);
     const id = crypto.randomUUID();
     const result = await room.op(id, { type: "absolute", parent: nodes[0]?.parent ?? null, page: page?.id, order: nodes[0]?.order, attrs: { "data-group": "true" }, ...geoProps(boxes) }, "created", "Group");
-    if (result !== "ok") return;
+    if (result !== "applied") return;
     for (const n of nodes) { const child = children[n.id]; if (child) await room.op(n.id, { parent: id, ...geoProps(child) }, "grouped", labelOf(n)); }
     void select(id);
   }
