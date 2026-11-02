@@ -13,3 +13,4 @@
 - Store grouping as real parent-child nodes and split compound content into persisted element nodes so canvas selection, properties, and export share the same structure.
 - Check live leases and selective locks before client interactions while retaining database RPC authorization as the security boundary.
 - Expose exported chart/store integration through the `window.WebCraft` API and DOM events; never embed payment secrets or trust client-calculated totals as payment authorization.
+- Keep the landing-page collaboration sequence illustrative and scroll-linked, using one cleaned-up animation-frame listener and a static completed scene for reduced motion; it must not create live collaboration subscriptions.
