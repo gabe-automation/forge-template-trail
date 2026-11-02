@@ -10,34 +10,52 @@ export function CollaborationScene() {
     if (!element) return;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     let frame = 0;
-    const update = () => {
+    let currentProgress = 0;
+    let lastTime = 0;
+    const update = (time = 0) => {
       frame = 0;
       const rect = element.getBoundingClientRect();
-      const progress = media.matches ? 1 : Math.max(0, Math.min(1, (window.innerHeight * 0.2 - rect.top) / Math.max(1, rect.height - window.innerHeight * 0.8)));
+      const target = media.matches ? 1 : Math.max(0, Math.min(1, (window.innerHeight * 0.2 - rect.top) / Math.max(1, rect.height - window.innerHeight * 0.8)));
+      const dt = Math.min(0.05, Math.max(0.016, (time - lastTime) / 1000));
+      lastTime = time;
+      currentProgress = media.matches ? 1 : currentProgress + (target - currentProgress) * (1 - Math.exp(-10 * dt));
+      const progress = currentProgress;
       element.style.setProperty("--assembly-progress", String(progress));
       element.dataset['step'] = String(Math.min(4, Math.floor(progress * 5)));
       for (let step = 0; step < 5; step++) {
         element.style.setProperty(`--reveal-${step}`, String(Math.max(0, Math.min(1, (progress - step * 0.17) / 0.13))));
       }
-      const positions = [
-        [12 + progress * 50, 22 + Math.sin(progress * Math.PI * 2) * 12],
-        [82 - progress * 22, 65 - Math.sin(progress * Math.PI) * 32],
-        [28 + progress * 38, 78 - progress * 12],
+      const paths = [
+        [[18, 14], [26, 28], [39, 35], [62, 48], [81, 83], [86, 89]],
+        [[81, 25], [77, 37], [70, 55], [55, 65], [35, 72], [27, 80]],
+        [[35, 82], [45, 72], [58, 68], [74, 72], [61, 87], [52, 91]],
       ];
+      const segment = Math.min(4, Math.floor(progress * 5));
+      const fraction = progress * 5 - segment;
+      const eased = fraction * fraction * (3 - 2 * fraction);
+      const positions = paths.map((path, i) => {
+        const from = path[segment] ?? [20, 20];
+        const to = path[segment + 1] ?? from;
+        const drift = media.matches ? 0 : Math.sin(time / 950 + i * 2) * 1.4;
+        return [(from[0] ?? 0) + ((to[0] ?? 0) - (from[0] ?? 0)) * eased + drift, (from[1] ?? 0) + ((to[1] ?? 0) - (from[1] ?? 0)) * eased + drift * 0.7];
+      });
       positions.forEach(([x, y], i) => {
         element.style.setProperty(`--cursor-${i}-x`, `${x}%`);
         element.style.setProperty(`--cursor-${i}-y`, `${y}%`);
       });
+      if (!media.matches && !document.hidden && rect.bottom > 0 && rect.top < window.innerHeight) frame = requestAnimationFrame(update);
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
     update();
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
+    document.addEventListener("visibilitychange", schedule);
     media.addEventListener("change", schedule);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
+      document.removeEventListener("visibilitychange", schedule);
       media.removeEventListener("change", schedule);
     };
   }, []);
@@ -58,7 +76,7 @@ export function CollaborationScene() {
               <div className="sample-footer assembly-piece piece-4"><span>COMMON GROUND®</span><span>A considered way of living.</span></div>
             </div>
             <div className="assembly-selection" aria-hidden="true"><span/><span/><span/><span/></div>
-            {["Alex", "Jamie", "Morgan"].map((name, i) => <div key={name} className={`assembly-cursor cursor-${i}`} aria-hidden="true"><MousePointer2/><span>{name}</span></div>)}
+            {["Alex", "Jamie", "Morgan"].map((name, i) => <div key={name} className={`assembly-cursor cursor-${i}`} aria-hidden="true"><i className="cursor-click"/><MousePointer2/><span>{name}<small className="cursor-action">{i === 0 ? "Designing" : i === 1 ? "Adding an image" : "Refining details"}</small></span></div>)}
           </div>
         </div>
       </div>

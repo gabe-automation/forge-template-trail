@@ -211,7 +211,14 @@
 .assembly-layer { display: flex; align-items: center; gap: 7px; padding: 10px 0; color: var(--muted-foreground); }
 .assembly-canvas { position: relative; flex: 1; min-width: 0; overflow: hidden; padding: 30px 44px; background-color: var(--muted); background-image: radial-gradient(var(--border) 1px, transparent 1px); background-size: 16px 16px; }
 .assembled-website { height: 100%; background: var(--showcase-paper); color: var(--showcase-ink); padding: 22px 26px; display: flex; flex-direction: column; }
-.assembly-piece { opacity: var(--piece-reveal); transform: translateY(calc((1 - var(--piece-reveal)) * 24px)); }
+.assembly-piece { opacity: var(--piece-reveal); transform: translate(calc((1 - var(--piece-reveal)) * var(--piece-x, 0px)), calc((1 - var(--piece-reveal)) * var(--piece-y, 45px))) rotate(calc((1 - var(--piece-reveal)) * var(--piece-angle, 0deg))) scale(calc(0.92 + var(--piece-reveal) * 0.08)); transform-origin: center; will-change: transform, opacity; }
+.sample-nav { --piece-x: -60px; --piece-y: -15px; }.sample-heading { --piece-x: -80px; --piece-angle: -3deg; }.sample-image { --piece-x: 100px; --piece-y: 60px; --piece-angle: 5deg; }.sample-details { --piece-x: -50px; }.sample-footer { --piece-y: 65px; }
+.sample-image img { transform: scale(calc(1.12 - var(--reveal-3) * 0.12)); }
+.collaboration-scroll[data-step="0"] .assembly-layer:nth-of-type(1), .collaboration-scroll[data-step="1"] .assembly-layer:nth-of-type(2), .collaboration-scroll[data-step="2"] .assembly-layer:nth-of-type(3), .collaboration-scroll[data-step="3"] .assembly-layer:nth-of-type(4), .collaboration-scroll[data-step="4"] .assembly-layer:nth-of-type(5) { background: var(--accent); color: var(--primary); }
+.cursor-action { display: block; font-size: 8px; margin-top: 2px; opacity: 0.8; }
+.cursor-click { position: absolute; top: -9px; left: -9px; width: 26px; height: 26px; border: 2px solid var(--cursor-color); border-radius: 50%; animation: cursor-click 3s ease-out infinite; }
+.cursor-1 .cursor-click { animation-delay: -1s; }.cursor-2 .cursor-click { animation-delay: -2s; }
+@keyframes cursor-click { 0%, 65% { transform: scale(0.2); opacity: 0; } 70% { opacity: 0.65; } 100% { transform: scale(1.6); opacity: 0; } }
 .piece-0 { --piece-reveal: var(--reveal-0); }.piece-1 { --piece-reveal: var(--reveal-1); }.piece-2 { --piece-reveal: var(--reveal-2); }.piece-3 { --piece-reveal: var(--reveal-3); }.piece-4 { --piece-reveal: var(--reveal-4); }
 .sample-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 9px; padding-bottom: 16px; border-bottom: 1px solid var(--landing-border); }
 .sample-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 22px 0; }
@@ -236,7 +243,7 @@
   .collaboration-scroll { height: 210vh; margin-top: 30px; }.collaboration-sticky { width: calc(100% - 24px); top: 12px; }.assembly-caption { font-size: 8px; }.assembly-caption > :first-child { max-width: 130px; }.assembly-stage { align-items: center; }
   .assembly-toolbar { padding: 0 10px; font-size: 9px; }.assembly-toolbar > :first-child > span, .assembly-done { display: none; }.assembly-layers { display: none; }.assembly-body { min-height: 400px; height: min(560px, calc(100svh - 110px)); }.assembly-canvas { padding: 18px 12px; }.assembled-website { padding: 16px 14px; }.sample-nav { font-size: 7px; }.sample-heading { display: block; padding: 20px 0; }.sample-heading h2 { font-size: 30px; }.sample-heading > div { margin-top: 12px; }.sample-heading p br { display: none; }.sample-link { margin-top: 5px; }.sample-details > :nth-child(2) { display: none; }.sample-image > span { font-size: 6px; }.sample-footer { font-size: 6px; }.assembly-selection { left: 12px; right: 12px; top: 78px; height: 158px; }.assembly-cursor svg { width: 20px; height: 20px; }.assembly-cursor > span { font-size: 8px; padding: 3px 5px; }
 }
-@media (prefers-reduced-motion: reduce) { .collaboration-scroll { height: auto; padding-bottom: 32px; }.collaboration-sticky { position: relative; top: 0; }.assembly-piece { opacity: 1; transform: none; }.assembly-selection { display: none; } }
+@media (prefers-reduced-motion: reduce) { .collaboration-scroll { height: auto; padding-bottom: 32px; }.collaboration-sticky { position: relative; top: 0; }.assembly-piece { opacity: 1; transform: none; }.sample-image img { transform: none; }.assembly-selection, .cursor-click { display: none; } }
 .editor-header { position: relative; z-index: 50; }
 .editor-tools { position: absolute; top: 100%; left: 0; right: 0; height: 44px; }
 .editor-workspace [data-node] { touch-action: none; }
