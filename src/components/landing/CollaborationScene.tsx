@@ -15,7 +15,7 @@ export function CollaborationScene() {
       const rect = element.getBoundingClientRect();
       const progress = media.matches ? 1 : Math.max(0, Math.min(1, (window.innerHeight * 0.2 - rect.top) / Math.max(1, rect.height - window.innerHeight * 0.8)));
       element.style.setProperty("--assembly-progress", String(progress));
-      element.dataset.step = String(Math.min(4, Math.floor(progress * 5)));
+      element.dataset['step'] = String(Math.min(4, Math.floor(progress * 5)));
       for (let step = 0; step < 5; step++) {
         element.style.setProperty(`--reveal-${step}`, String(Math.max(0, Math.min(1, (progress - step * 0.17) / 0.13))));
       }
