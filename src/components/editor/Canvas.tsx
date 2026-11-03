@@ -16,6 +16,8 @@ type Props = {
   bp: Breakpoint;
   theme: Theme;
   scale: number;
+  previewWidth?: number;
+  onInspect?: (id: string) => void;
   selected: string | null;
   mySession: string;
   leases: Record<string, Lease>;
@@ -56,7 +58,7 @@ export function Canvas(p: Props) {
   const accessRef = useRef(p);
   accessRef.current = p;
   const blocked = (id: string) => nodeBlocked(id, accessRef.current.leases, accessRef.current.locks, accessRef.current.mySession, accessRef.current.canOverride);
-  const pageW = BREAKPOINTS[p.bp].width;
+  const pageW = p.previewWidth ?? BREAKPOINTS[p.bp].width;
   const pageH = pageHeight(p.nodes, p.bp);
   const pageRef = useRef<HTMLDivElement>(null);
   const [local, setLocal] = useState<{ id: string; g: Geo } | null>(null);
@@ -175,8 +177,9 @@ export function Canvas(p: Props) {
   }
 
   function startDrag(e: React.PointerEvent, n: NodeView, resizing: boolean) {
-    if (p.readOnly || e.button !== 0) return;
+    if (e.button !== 0) return;
     e.stopPropagation();
+    if (p.readOnly) { p.onSelect(n.id); return; }
     if (e.shiftKey && p.onMultiSelect) { p.onMultiSelect(n.id); return; }
     p.onSelect(n.id);
     if (blocked(n.id)) return;
@@ -276,6 +279,7 @@ export function Canvas(p: Props) {
           transition: remote ? "left 60ms linear, top 60ms linear" : undefined,
         }}
         onPointerDown={(e) => startDrag(e, n, false)}
+        onDoubleClick={(e) => { e.stopPropagation(); p.onInspect?.(n.id); }}
       >
         {!panel && (
           <div

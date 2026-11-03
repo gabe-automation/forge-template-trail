@@ -14,3 +14,4 @@
 - Check live leases and selective locks before client interactions while retaining database RPC authorization as the security boundary.
 - Expose exported chart/store integration through the `window.WebCraft` API and DOM events; never embed payment secrets or trust client-calculated totals as payment authorization.
 - Keep the landing-page collaboration sequence illustrative and scroll-linked, using one cleaned-up animation-frame loop that pauses offscreen or when hidden and a static completed scene for reduced motion; it must not create live collaboration subscriptions.
+- Persist molded borders as validated eight-value percentage border radii on node styles so canvas rendering and portable exports use the same geometry.

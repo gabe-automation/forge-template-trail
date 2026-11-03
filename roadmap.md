@@ -12,6 +12,9 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
+- [x] Swap builder panels and slim the header.
+- [x] Add moldable freeform shape and border controls.
+- [ ] Verify signed-in builder panel, selection, and shape flows — blocked: requesting user has no matching account session; fixes and unit checks implemented, mobile remains read-only.
 - [x] Add and verify scroll-driven landing-page collaborators assembling a website on desktop and mobile, including reduced motion.
 - [x] Make mobile read-only for every role, retaining tablet and desktop editing.
 - [x] Reorganize header and panels for desktop, tablet, and phone editing.

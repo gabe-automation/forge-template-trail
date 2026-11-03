@@ -28,6 +28,7 @@ import { useChat } from "@/lib/useChat";
 import { useDragPrefs } from "@/lib/dragPrefs";
 import { DragSettings } from "@/components/editor/DragSettings";
 import { IntegrationFields } from "@/components/editor/IntegrationFields";
+import { FreeformShape } from "@/components/editor/FreeformShape";
 import { COMPOUND_TYPES, geoProps, groupingGeometry, splitRenderedBlock } from "@/lib/editorStructure";
 import { nodeBlocked } from "@/lib/nodeAccess";
 import type { NodeLock } from "@/lib/useRoom";
@@ -598,7 +599,7 @@ function EditorPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [page?.kind]);
-  const fit = Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width);
+  const fit = Math.max(0.1, Math.min(1, (areaW - (areaW < 640 ? 24 : 64)) / BREAKPOINTS[bp].width));
   const [zoom, setZoom] = useState(1);
   const scale = fit * zoom;
   const zoomRef = useRef({ zoom, fit });
@@ -694,7 +695,7 @@ function EditorPage() {
   const onPage = (s: string) => room.peers.filter((p) => p.session !== room.session && (room.cursors[p.session]?.page ?? null) === s);
 
   return (
-    <div className="editor-workspace flex h-dvh flex-col overflow-hidden bg-background">
+    <div className={`editor-workspace ${readOnly ? "editor-read-only" : ""} flex h-dvh flex-col overflow-hidden bg-background`}>
       <header className="editor-header grid h-11 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 border-b bg-card px-2 [&_button]:h-8">
         <Button variant="ghost" size="icon" asChild><Link to="/projects" aria-label="Back to projects"><ArrowLeft /></Link></Button>
         <span className="min-w-0 truncate font-display text-sm font-semibold xl:max-w-40">{info?.project?.name ?? "…"}</span>
@@ -705,7 +706,7 @@ function EditorPage() {
         <div className="editor-tools col-span-3 flex min-w-0 items-center gap-1 overflow-x-auto border-b bg-card px-2 py-1.5 [&>*]:shrink-0">
         <Button size="icon" variant={assetsOpen ? "secondary" : "ghost"} className="lg:hidden" aria-label="Pages, layers and assets" title="Pages, layers and assets" onClick={() => { setAssetsOpen(v => !v); setPanelOpen(false); }}><Layers className="size-4" /></Button>
         {readOnly && (
-          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={isMobile ? "Your membership is view only" : undefined}>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={isMobile ? "Mobile is read-only for everyone" : undefined}>
             View only
           </span>
         )}
@@ -778,7 +779,7 @@ function EditorPage() {
         {(assetsOpen || panelOpen) && <div className="fixed inset-x-0 bottom-0 top-[5.5rem] z-30 bg-background/60 xl:hidden" onClick={() => { setAssetsOpen(false); setPanelOpen(false); }} />}
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside aria-label="Properties" className={`${panelOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last w-[min(20rem,92vw)] shrink-0 flex-col border-l bg-card xl:static xl:flex xl:w-72 xl:shadow-none`}>
+        <aside aria-label="Properties" className={`${panelOpen ? "fixed bottom-0 left-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-first w-[min(20rem,92vw)] shrink-0 flex-col border-r bg-card xl:static xl:flex xl:w-64 xl:shadow-none`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-2 grid grid-cols-4">
@@ -909,7 +910,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside aria-label="Pages layers and assets" className={`${assetsOpen ? "fixed bottom-0 left-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-first w-[min(18rem,88vw)] shrink-0 flex-col overflow-y-auto border-r bg-sidebar p-2 lg:static lg:flex lg:w-52 lg:shadow-none xl:w-60`}>
+        <aside aria-label="Pages layers and assets" className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last w-[min(18rem,88vw)] shrink-0 flex-col overflow-y-auto border-l bg-sidebar p-2 lg:static lg:flex lg:w-52 lg:shadow-none xl:w-56`}>
           <div className="flex justify-end lg:hidden"><Button size="icon" variant="ghost" aria-label="Close assets panel" onClick={() => setAssetsOpen(false)}><X className="size-4" /></Button></div>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
@@ -968,13 +969,13 @@ function EditorPage() {
               <p className="mb-2 border-t px-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Assets</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.keys(BLOCKS) as BlockType[]).map((t) => (
-                  <button key={t} disabled={readOnly} draggable={!readOnly}
+                  <Button variant="outline" key={t} disabled={readOnly} draggable={!readOnly}
                     onDragStart={(e) => e.dataTransfer.setData("application/x-webcraft-block", t)}
                     onClick={() => { void addBlock(t, undefined, undefined, sel && isContainer(sel.type) ? sel.id : undefined); setAssetsOpen(false); }}
-                    className="flex flex-col items-center gap-1 rounded-md border bg-card px-1 py-2 text-[11px] hover:border-primary disabled:opacity-50">
+                    className="h-auto min-h-14 flex-col gap-1 whitespace-normal px-1 py-2 text-[11px]">
                     <BlockGlyph type={t} />
                     {BLOCKS[t].name}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -1026,9 +1027,10 @@ function EditorPage() {
             ) : (
               <>
                 {views.length === 0 && <p className="mb-4 text-center text-muted-foreground">{readOnly ? "Empty page" : "Blank page"}</p>}
-                <div className="relative mx-auto" style={{ width: BREAKPOINTS[bp].width * scale }}>
+                <div className="relative mx-auto" style={{ width: (frameW ?? BREAKPOINTS[bp].width) * scale }}>
                 <p className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground"><span className="font-medium text-foreground">{page.title}</span> {BREAKPOINTS[bp].label} · {frameW ?? BREAKPOINTS[bp].width}px</p>
                 <Canvas nodes={views} bp={bp} theme={theme} scale={scale} selected={selected} mySession={room.session} leases={room.leases}
+                  previewWidth={frameW ?? BREAKPOINTS[bp].width} onInspect={id => { void select(id); setPanelOpen(true); setAssetsOpen(false); }}
                   cursors={room.cursors} pageId={page.id} drags={room.drags} readOnly={readOnly} prefs={prefs} locks={room.locks} canOverride={canOverride} onSelect={select} onCommit={commitGeo}
                   multiSelected={multiSelected} onMultiSelect={multiSelect} lockControls={{ myId: user.id, isOwner, members, onSet: (id, mode, allowed) => room.setLock(id, mode, allowed, "Block") }}
                   onLiveDrag={(id, g, done) => room.sendDrag({ id, bp, ...g, done })}
@@ -1040,7 +1042,7 @@ function EditorPage() {
                     const sibs = views.filter((v) => v.parent === n.parent && v.id !== id).sort((a, b) => (a.order < b.order ? -1 : 1));
                     const idx = beforeId ? sibs.findIndex((v) => v.id === beforeId) : sibs.length;
                     const prev = sibs[idx - 1]?.order ?? null;
-                    const next = idx < sibs.length ? sibs[idx]!.order : null;
+                    const next = idx < sibs.length ? sibs[idx]?.order ?? null : null;
                     room.op(id, { order: keyBetween(prev, next) }, "reordered", labelOf(n));
                   }} />
                 {!readOnly && !isMobile && (
@@ -1341,12 +1343,13 @@ function Inspector(props: {
           <span className="block font-medium">Shape</span>
           <div className="grid grid-cols-7 gap-1">
             {(Object.keys(SHAPES) as ShapeKey[]).map((k) => (
-              <button key={k} disabled={disabled} title={SHAPES[k].label} aria-label={SHAPES[k].label} onClick={() => props.onStyle("shape", k === "rect" ? null : k)}
-                className={`grid aspect-square place-items-center rounded border ${(st.shape ?? "rect") === k ? "border-primary bg-primary/10" : "hover:bg-secondary"}`}>
+              <Button variant="outline" size="icon" key={k} disabled={disabled} title={SHAPES[k].label} aria-label={SHAPES[k].label} onClick={() => { props.onStyle("freeRadius", null); props.onStyle("shape", k === "rect" ? null : k); }}
+                className={`h-auto w-full aspect-square p-0 ${(st.shape ?? "rect") === k ? "border-primary bg-accent" : ""}`}>
                 <span className="block size-4 bg-primary/70" style={styleObj({ shape: k })} />
-              </button>
+              </Button>
             ))}
           </div>
+          <FreeformShape value={st.freeRadius} disabled={disabled} onChange={radius => { props.onStyle("clip", null); props.onStyle("shape", null); props.onStyle("freeRadius", radius); }}/>
           <Input aria-label="Custom clip path" placeholder="Custom: polygon(0 0, 100% 0, 80% 100%, 0 100%)" disabled={disabled} defaultValue={st.clip ?? ""} key={node.id + (st.clip ?? "")}
             onBlur={(e) => props.onStyle("clip", e.target.value.trim() || null)} className="h-8 font-mono text-[11px]" />
           {range("rotate", "Rotation (°)", -180, 180, 1, 0)}

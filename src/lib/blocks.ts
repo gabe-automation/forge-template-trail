@@ -401,7 +401,7 @@ export type BlockStyle = {
   bg?: string; color?: string; btn?: string; radius?: number; pad?: number;
   align?: "left" | "center" | "right"; opacity?: number; scale?: number;
   border?: string; shadow?: boolean; font?: "serif" | "sans" | "mono";
-  shape?: ShapeKey; clip?: string; rotate?: number; anim?: AnimKey; animDur?: number; animDelay?: number;
+  shape?: ShapeKey; clip?: string; freeRadius?: string; rotate?: number; anim?: AnimKey; animDur?: number; animDelay?: number;
 };
 export const SHAPES = {
   rect: { label: "Rectangle", css: [] },
@@ -424,7 +424,8 @@ export const ANIMS = { fade: "Fade in", up: "Slide up", left: "Slide from left",
 export type AnimKey = keyof typeof ANIMS;
 /** Only allow simple clip-path shape functions in custom shapes. */
 export const safeClip = (v?: string) => v && /^(polygon|circle|ellipse|inset)\([-\d.%\s,a-z()+*/]*\)$/i.test(v.trim()) && !/url|expression/i.test(v) ? v.trim() : "";
-export const STYLE_KEYS: (keyof BlockStyle)[] = ["bg", "color", "btn", "radius", "pad", "align", "opacity", "scale", "border", "shadow", "font", "shape", "clip", "rotate", "anim", "animDur", "animDelay"];
+export const safeFreeRadius = (value?: string) => value && /^(?:\d{1,3}(?:\.\d+)?%\s+){3}\d{1,3}(?:\.\d+)?%\s*\/\s*(?:\d{1,3}(?:\.\d+)?%\s+){3}\d{1,3}(?:\.\d+)?%$/.test(value.trim()) && (value.match(/\d+(?:\.\d+)?/g) ?? []).every(n => Number(n) <= 100) ? value.trim() : "";
+export const STYLE_KEYS: (keyof BlockStyle)[] = ["bg", "color", "btn", "radius", "pad", "align", "opacity", "scale", "border", "shadow", "font", "shape", "clip", "freeRadius", "rotate", "anim", "animDur", "animDelay"];
 const FONTS = { serif: "Georgia,'Times New Roman',serif", sans: "system-ui,-apple-system,sans-serif", mono: "ui-monospace,Menlo,monospace" };
 
 export function styleDecls(s: BlockStyle): [string, string][] {
@@ -441,6 +442,7 @@ export function styleDecls(s: BlockStyle): [string, string][] {
   if (s.shadow) o.push(["box-shadow", "0 18px 40px -18px rgba(0,0,0,.35)"]);
   if (s.font) o.push(["font-family", FONTS[s.font]]);
   if (s.shape && SHAPES[s.shape]) o.push(...(SHAPES[s.shape].css as [string, string][]));
+  if (safeFreeRadius(s.freeRadius)) o.push(["border-radius", safeFreeRadius(s.freeRadius)]);
   if (safeClip(s.clip)) o.push(["clip-path", safeClip(s.clip)]);
   if (s.rotate) o.push(["rotate", `${s.rotate}deg`]);
   if (s.anim && ANIMS[s.anim]) {
