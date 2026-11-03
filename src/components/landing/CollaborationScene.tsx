@@ -40,8 +40,8 @@ export function CollaborationScene() {
         return [(from[0] ?? 0) + ((to[0] ?? 0) - (from[0] ?? 0)) * eased + drift, (from[1] ?? 0) + ((to[1] ?? 0) - (from[1] ?? 0)) * eased + drift * 0.7];
       });
       positions.forEach(([x, y], i) => {
-        element.style.setProperty(`--cursor-${i}-x`, `${x}%`);
-        element.style.setProperty(`--cursor-${i}-y`, `${y}%`);
+        element.style.setProperty(`--cursor-${i}-x`, `${Math.min(72, x ?? 0)}%`);
+        element.style.setProperty(`--cursor-${i}-y`, `${Math.min(80, y ?? 0)}%`);
       });
       if (!media.matches && !document.hidden && rect.bottom > 0 && rect.top < window.innerHeight) frame = requestAnimationFrame(update);
     };
