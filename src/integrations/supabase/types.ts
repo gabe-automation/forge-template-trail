@@ -336,6 +336,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           name: string
           owner_id: string
@@ -344,6 +345,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name: string
           owner_id: string
@@ -352,6 +354,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           name?: string
           owner_id?: string
