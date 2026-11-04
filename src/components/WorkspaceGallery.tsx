@@ -1,7 +1,7 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FolderOpen, LayoutTemplate, LogOut, Plus, Search } from "lucide-react";
+import { ArrowUpRight, FolderOpen, LayoutTemplate, LogOut, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_TEMPLATES, templateViews, templatePageCount, type SiteTemplate } from "@/lib/siteTemplates";
@@ -16,7 +16,7 @@ export function WorkspaceShell({ children, section, onSection, signedIn = false,
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-5 lg:block lg:p-4">
         <Link to="/" className="font-display text-xl font-bold">WebCraft<span className="text-primary">.</span></Link>
         <nav aria-label="Workspace" className="flex gap-1 lg:mt-4 lg:flex-col">
-          {[{ name: "Projects", icon: FolderOpen }, { name: "Templates", icon: LayoutTemplate }].map(({ name, icon: Icon }) =>
+          {[{ name: "Projects", icon: FolderOpen }, { name: "Templates", icon: LayoutTemplate }, ...(signedIn ? [{ name: "Trash", icon: Trash2 }] : [])].map(({ name, icon: Icon }) =>
             <Button key={name} variant="ghost" aria-pressed={section === name} onClick={() => onSection(name)}
               aria-label={name} className={`h-8 justify-start px-3 text-sm lg:w-full ${section === name ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}>
               <Icon className="size-4"/><span className="hidden sm:inline">{name}</span>
