@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorkspaceShell, TemplateGallery } from "@/components/WorkspaceGallery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowUpRight, Check, Plus } from "lucide-react";
+import { ArrowUpRight, Check, Plus, Trash2, RotateCcw } from "lucide-react";
 import { useDeviceAccess } from "@/hooks/use-device-access";
+import { canManageProject, inProjectSection } from "@/lib/projectTrash";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -40,7 +41,7 @@ function Projects() {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("project_members")
-        .select("role, projects(id, name, created_at)")
+        .select("role, projects(id, name, created_at, deleted_at)")
         .eq("user_id", u.user?.id ?? "");
       if (error) throw error;
       return (data ?? [])
@@ -78,7 +79,18 @@ function Projects() {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
-  const filtered = (projects ?? []).filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (projects ?? []).filter((p) => inProjectSection(p.deleted_at, section) && p.name.toLowerCase().includes(search.toLowerCase()));
+
+  async function removeProject(id: string, action: "trash" | "restore" | "delete") {
+    if (busy || !canManageProject(projects?.find(p => p.id === id)?.role ?? "", readOnly)) return;
+    if (action !== "restore" && !window.confirm(action === "delete" ? "Permanently delete this project and all its pages? This cannot be undone." : "Move this project to Trash?")) return;
+    setBusy(true);
+    const result = action === "delete" ? await supabase.from("projects").delete().eq("id", id) : await supabase.from("projects").update({ deleted_at: action === "restore" ? null : new Date().toISOString() }).eq("id", id);
+    setBusy(false);
+    if (result.error) { toast.error("Couldn't update the project"); return; }
+    await qc.invalidateQueries({ queryKey: ["projects"] });
+    toast.success(action === "restore" ? "Project restored" : action === "delete" ? "Project permanently deleted" : "Project moved to Trash");
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -106,16 +118,16 @@ function Projects() {
       : <>
         {isLoading && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-56 animate-pulse rounded-lg bg-muted"/>)}</div>}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {!readOnly && !isLoading && <button type="button" onClick={() => { setTpl(""); setCreating(true); }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition hover:ring-2 hover:ring-primary">
+          {!readOnly && !isLoading && section !== "Trash" && <button type="button" onClick={() => { setTpl(""); setCreating(true); }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition hover:ring-2 hover:ring-primary">
             <span className="grid h-[180px] place-items-center bg-muted"><span className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground"><Plus className="size-6"/></span></span>
             <span className="block p-3"><span className="block text-sm font-medium">New design file</span><span className="text-xs text-muted-foreground">Blank or from a template</span></span>
           </button>}
-          {filtered.map((p) => <Link key={p.id} to="/p/$projectId" params={{ projectId: p.id }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition hover:ring-2 hover:ring-primary">
+          {filtered.map((p) => <div key={p.id} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition hover:ring-2 hover:ring-primary"><Link to="/p/$projectId" params={{ projectId: p.id }}>
             <div className="h-[180px] overflow-hidden bg-muted"><SitePreview nodes={thumbs?.[p.id]?.nodes ?? []} theme={thumbs?.[p.id]?.theme ?? DEFAULT_THEME} height={180}/></div>
             <div className="flex min-w-0 items-center gap-2 border-t p-3"><span className="grid size-6 shrink-0 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground">{p.name.slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{p.name}</span><span className="block text-xs capitalize text-muted-foreground">{p.role} · {new Date(p.created_at).toLocaleDateString()}</span></span><ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100"/></div>
-          </Link>)}
+          </Link>{p.role === "owner" && !readOnly && <div className="flex justify-end gap-1 border-t px-2 py-1">{p.deleted_at && <Button size="icon" variant="ghost" disabled={busy} aria-label={`Restore ${p.name}`} title="Restore project" onClick={() => removeProject(p.id, "restore")}><RotateCcw className="size-4"/></Button>}<Button size="icon" variant="ghost" disabled={busy} aria-label={`${p.deleted_at ? "Permanently delete" : "Move to trash"} ${p.name}`} title={p.deleted_at ? "Permanently delete" : "Move to trash"} onClick={() => removeProject(p.id, p.deleted_at ? "delete" : "trash")}><Trash2 className="size-4"/></Button></div>}</div>)}
         </div>
-        {!isLoading && filtered.length === 0 && <div className="mt-8"><h2 className="mb-6 text-xl font-semibold">Start from a template</h2><TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/></div>}
+        {!isLoading && filtered.length === 0 && (section === "Trash" ? <p className="py-12 text-muted-foreground">Trash is empty.</p> : <div className="mt-8"><h2 className="mb-6 text-xl font-semibold">Start from a template</h2><TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/></div>)}
       </>}
     <Dialog open={creating && !readOnly} onOpenChange={setCreating}>
       <DialogContent className="max-h-[92vh] overflow-y-auto rounded-2xl sm:max-w-3xl">

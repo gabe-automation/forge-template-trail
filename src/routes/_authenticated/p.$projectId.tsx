@@ -521,13 +521,13 @@ function EditorPage() {
         const w = Math.min(b.w ?? def.w, pageW), h = b.h ?? def.h;
         const geometry = viewsFor.find((n) => n.id === `${t.id}-${i}-0000-0000-000000000000`)?.geo;
         order = keyBetween(order, null);
-        const kidJobs = (b.kids ?? []).map((k) => {
+        const kidJobs = (b.kids ?? []).map((k, j) => {
           const kd = BLOCKS[k.type];
           order = keyBetween(order, null);
           const kg = { x: k.x ?? 0, y: k.y, w: k.w ?? kd.w, h: k.h ?? kd.h };
           return room.op(crypto.randomUUID(), {
             type: k.type, parent: pid, page: pageTarget, order, deleted: false,
-            ...Object.fromEntries((["desktop", "tablet", "mobile"] as const).flatMap((bp2) => Object.entries(kg).map(([kk, v]) => [`${kk}@${bp2}`, v]))),
+            ...Object.fromEntries((["desktop", "tablet", "mobile"] as const).flatMap((bp2) => Object.entries(viewsFor.find(n => n.id === `${t.id}-${i}-${j}-k000-0000-000000000000`)?.geo[bp2] ?? kg).map(([kk, v]) => [`${kk}@${bp2}`, v]))),
             text: k.text ?? kd.text, sub: k.sub ?? kd.sub, label: k.label ?? kd.label, href: k.href ?? "", attrs: k.attrs ?? {},
             html: k.html ?? "", css: k.css ?? "", script: k.script ?? "",
             ...Object.fromEntries(Object.entries(k.style ?? {}).map(([kk, v]) => [`s.${kk}`, v])),

@@ -292,7 +292,7 @@ export function themeVars(t: Theme): string {
 
 // Shared block styles — used by the live canvas AND the exported styles.css.
 export const BLOCK_CSS = `
-.wc-page{position:relative;background:var(--wc-surface);color:var(--wc-ink);font-family:'Manrope',system-ui,sans-serif;}
+.wc-page{container-type:inline-size;container-name:website;position:relative;background:var(--wc-surface);color:var(--wc-ink);font-family:'Manrope',system-ui,sans-serif;}
 .wc-page:has(.wc-hero){background:color-mix(in srgb,var(--wc-surface) 96%,var(--wc-accent))}
 .wc-page *{box-sizing:border-box;}
 .wc-el{position:absolute;overflow:hidden;}
@@ -353,8 +353,8 @@ export const BLOCK_CSS = `
 .wc-box-absolute{position:absolute;}
 .wc-box-absolute>.wc-el{position:absolute;}
 .wc-box-section{background:color-mix(in srgb,var(--wc-accent) 7%,var(--wc-surface));}
-@media (max-width:640px){[data-hide-mobile="true"]{display:none!important}}
-@media (min-width:1025px){[data-hide-desktop="true"]{display:none!important}}
+@container website (max-width:640px){[data-hide-mobile="true"]{display:none!important}}
+@container website (min-width:1025px){[data-hide-desktop="true"]{display:none!important}}
 .wc-video{margin:0;height:100%;display:flex;flex-direction:column;gap:8px;}
 .wc-video-frame{flex:1;width:100%;min-height:0;border:0;border-radius:14px;background:#000;object-fit:cover;display:block;}
 .wc-video-empty{flex:1;display:grid;place-items:center;border-radius:14px;background:linear-gradient(135deg,var(--wc-ink),color-mix(in srgb,var(--wc-primary) 60%,var(--wc-ink)));color:var(--wc-surface);font-size:42px;}
@@ -392,8 +392,8 @@ export const BLOCK_CSS = `
 @keyframes wc-pulse{0%,100%{scale:1}50%{scale:1.04}}
 @keyframes wc-spin{to{rotate:360deg}}
 @media (prefers-reduced-motion:reduce){.wc-el{animation:none!important}}
-@media (max-width:1024px){.wc-hero{padding:36px}.wc-hero h1{font-size:52px}.wc-nav{gap:16px;padding:0 24px}.wc-heading{padding:40px 24px 16px}}
-@media (max-width:640px){.wc-hero{padding:24px;gap:18px}.wc-hero h1{font-size:36px;overflow-wrap:anywhere}.wc-hero p{font-size:16px}.wc-nav{padding:0 16px;gap:12px}.wc-nav ul{display:none}.wc-brand{margin-right:auto}.wc-heading{font-size:28px}.wc-cards,.wc-pricing{padding:20px;gap:10px;grid-template-columns:1fr}.wc-card,.wc-plan{padding:18px}.wc-quote,.wc-form,.wc-section{padding:24px}.wc-footer{padding:16px;gap:12px;flex-wrap:wrap}.wc-box-flex{flex-direction:column!important;height:auto!important;min-height:100%}.wc-box-flex>.wc-flow{width:100%!important}.wc-box-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@container website (max-width:1024px){.wc-hero{padding:36px}.wc-hero h1{font-size:52px}.wc-nav{gap:16px;padding:0 24px}.wc-heading{padding:40px 24px 16px}}
+@container website (max-width:640px){.wc-hero{padding:24px;gap:18px}.wc-hero h1{font-size:36px;overflow-wrap:anywhere}.wc-hero p{font-size:16px}.wc-nav{padding:0 16px;gap:12px}.wc-nav ul{display:none}.wc-brand{margin-right:auto}.wc-heading{font-size:28px}.wc-cards,.wc-pricing{padding:20px;gap:10px;grid-template-columns:1fr}.wc-card,.wc-plan{padding:18px}.wc-quote,.wc-form,.wc-section{padding:24px}.wc-footer{padding:16px;gap:12px;flex-wrap:wrap}}
 `;
 
 // Per-block design overrides (stored as "s.<key>" properties on the node).

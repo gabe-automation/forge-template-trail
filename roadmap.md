@@ -12,6 +12,9 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
+- [x] Correct shared device proportions in templates, canvas, and exported sites; verified viewport fitting at 375px, 700px, and 1280px.
+- [x] Add project trash, restoration, and confirmed permanent removal with owner protection.
+- [ ] Verify trash/restore/delete in signed-in workspace — blocked: no requesting-user account session; please sign in to preview.
 - [x] Swap builder panels and slim the header.
 - [x] Add moldable freeform shape and border controls.
 - [ ] Verify signed-in builder panel, selection, and shape flows — blocked: requesting user has no matching account session; fixes and unit checks implemented, mobile remains read-only.
