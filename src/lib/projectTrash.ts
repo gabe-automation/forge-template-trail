@@ -1,0 +1,2 @@
+export const canManageProject = (role: string, readOnly: boolean) => role === "owner" && !readOnly;
+export const inProjectSection = (deletedAt: string | null, section: string) => Boolean(deletedAt) === (section === "Trash");

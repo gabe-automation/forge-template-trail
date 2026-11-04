@@ -15,3 +15,5 @@
 - Expose exported chart/store integration through the `window.WebCraft` API and DOM events; never embed payment secrets or trust client-calculated totals as payment authorization.
 - Keep the landing-page collaboration sequence illustrative and scroll-linked, using one cleaned-up animation-frame loop that pauses offscreen or when hidden and a static completed scene for reduced motion; it must not create live collaboration subscriptions.
 - Persist molded borders as validated eight-value percentage border radii on node styles so canvas rendering and portable exports use the same geometry.
+- Base built-in website content responsiveness on the named page container; preserve saved breakpoint rectangles and fit exports uniformly to narrower viewports.
+- Store project trash state on projects.deleted_at, protect transitions with an owner-checking database trigger, and require confirmation before irreversible cascade deletion.

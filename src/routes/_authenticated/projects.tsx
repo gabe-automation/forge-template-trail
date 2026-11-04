@@ -14,6 +14,7 @@ import { WorkspaceShell, TemplateGallery } from "@/components/WorkspaceGallery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ArrowUpRight, Check, Plus, Trash2, RotateCcw } from "lucide-react";
 import { useDeviceAccess } from "@/hooks/use-device-access";
+import { canManageProject, inProjectSection } from "@/lib/projectTrash";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -78,10 +79,10 @@ function Projects() {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
-  const filtered = (projects ?? []).filter((p) => Boolean(p.deleted_at) === (section === "Trash") && p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (projects ?? []).filter((p) => inProjectSection(p.deleted_at, section) && p.name.toLowerCase().includes(search.toLowerCase()));
 
   async function removeProject(id: string, action: "trash" | "restore" | "delete") {
-    if (readOnly || busy) return;
+    if (busy || !canManageProject(projects?.find(p => p.id === id)?.role ?? "", readOnly)) return;
     if (action !== "restore" && !window.confirm(action === "delete" ? "Permanently delete this project and all its pages? This cannot be undone." : "Move this project to Trash?")) return;
     setBusy(true);
     const result = action === "delete" ? await supabase.from("projects").delete().eq("id", id) : await supabase.from("projects").update({ deleted_at: action === "restore" ? null : new Date().toISOString() }).eq("id", id);
