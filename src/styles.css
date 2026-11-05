@@ -40,6 +40,9 @@
   --color-warning: var(--warning);
   --color-ink: var(--ink);
   --color-paper: var(--paper);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -57,73 +60,79 @@
 
 :root {
   --radius: 0.375rem;
-  --paper: #F5F5F5;
-  --ink: #1E1E1E;
+  --paper: oklch(0.985 0.002 250);
+  --ink: oklch(0.23 0.008 250);
   --background: var(--paper);
   --foreground: var(--ink);
-  --card: #ffffff;
+  --card: oklch(1 0 0);
   --card-foreground: var(--ink);
-  --popover: #ffffff;
+  --popover: var(--card);
   --popover-foreground: var(--ink);
-  --primary: #0D99FF;
-  --primary-foreground: #ffffff;
-  --secondary: #EBEBEB;
+  --primary: oklch(0.52 0.19 255);
+  --primary-foreground: oklch(1 0 0);
+  --brand-surface: oklch(0.38 0.14 255);
+  --brand-foreground: oklch(0.985 0.003 250);
+  --brand-muted: oklch(0.83 0.04 250);
+  --secondary: oklch(0.95 0.003 250);
   --secondary-foreground: var(--ink);
-  --muted: #F0F0F0;
-  --muted-foreground: #6B6B6B;
-  --accent: #E5F4FF;
-  --accent-foreground: #0A6DC2;
-  --destructive: #F24822;
-  --destructive-foreground: #ffffff;
-  --success: #14AE5C;
-  --warning: #FFCD29;
-  --border: #E6E6E6;
-  --input: #E6E6E6;
-  --ring: #0D99FF;
-  --canvas: #E5E5E5;
-  --grid: #D0D0D0;
-  --guide: #F24822;
+  --muted: oklch(0.96 0.003 250);
+  --muted-foreground: oklch(0.50 0.014 250);
+  --accent: oklch(0.94 0.03 250);
+  --accent-foreground: oklch(0.42 0.15 255);
+  --destructive: oklch(0.55 0.21 28);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.52 0.14 155);
+  --warning: oklch(0.79 0.16 85);
+  --border: oklch(0.89 0.006 250);
+  --input: var(--border);
+  --ring: var(--primary);
+  --canvas: oklch(0.93 0.004 250);
+  --grid: oklch(0.83 0.008 250);
+  --guide: var(--primary);
   --chart-1: var(--primary);
-  --chart-2: #9747FF;
-  --chart-3: #14AE5C;
+  --chart-2: oklch(0.56 0.19 305);
+  --chart-3: var(--success);
   --chart-4: var(--warning);
   --chart-5: var(--destructive);
-  --sidebar: #ffffff;
+  --sidebar: var(--card);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #F0F0F0;
-  --sidebar-accent-foreground: var(--ink);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --shadow-soft: 0 1px 3px color-mix(in srgb,#000 10%,transparent);
-  --shadow-lift: 0 2px 14px color-mix(in srgb,#000 15%,transparent);
+  --shadow-soft: 0 1px 3px color-mix(in oklab, var(--ink) 8%, transparent);
+  --shadow-lift: 0 4px 20px color-mix(in oklab, var(--ink) 12%, transparent);
+  color-scheme: light;
 }
 .dark {
-  --paper: #1E1E1E;
-  --ink: #F5F5F5;
-  --card: #2C2C2C;
-  --popover: #2C2C2C;
-  --secondary: #383838;
-  --muted: #383838;
-  --muted-foreground: #A6A6A6;
-  --accent: #0D3A5C;
-  --accent-foreground: #8CCBFF;
-  --border: #444444;
-  --input: #444444;
-  --canvas: #1E1E1E;
-  --grid: #3A3A3A;
-  --sidebar: #2C2C2C;
-  --sidebar-accent: #383838;
-  --sidebar-border: #444444;
-  --shadow-soft: 0 1px 3px color-mix(in srgb,#000 40%,transparent);
-  --shadow-lift: 0 4px 20px color-mix(in srgb,#000 50%,transparent);
+  --paper: oklch(0.19 0.004 250);
+  --ink: oklch(0.96 0.003 250);
+  --card: oklch(0.235 0.005 250);
+  --popover: var(--card);
+  --primary: oklch(0.72 0.15 250);
+  --primary-foreground: oklch(0.18 0.025 255);
+  --secondary: oklch(0.29 0.006 250);
+  --muted: oklch(0.27 0.005 250);
+  --muted-foreground: oklch(0.73 0.01 250);
+  --accent: oklch(0.30 0.055 250);
+  --accent-foreground: oklch(0.83 0.09 250);
+  --destructive: oklch(0.70 0.17 28);
+  --destructive-foreground: oklch(0.18 0.02 28);
+  --success: oklch(0.72 0.15 155);
+  --border: oklch(0.35 0.006 250);
+  --canvas: oklch(0.16 0.003 250);
+  --grid: oklch(0.30 0.006 250);
+  --shadow-soft: 0 1px 3px color-mix(in oklab, var(--canvas) 40%, transparent);
+  --shadow-lift: 0 4px 20px color-mix(in oklab, var(--canvas) 60%, transparent);
   color-scheme: dark;
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
+    letter-spacing: 0;
   }
   body {
     background-color: var(--color-background);
@@ -166,26 +175,12 @@
 }
 
 :root {
-  --showcase-paper: #f7faf8;
-  --showcase-ink: #182b25;
-  --showcase-accent: #28765b;
-  --landing-background: oklch(0.985 0.003 160);
-  --landing-foreground: oklch(0.23 0.018 160);
-  --landing-primary: oklch(0.49 0.09 160);
-  --landing-muted: oklch(0.96 0.008 160);
-  --landing-border: oklch(0.89 0.009 160);
+  --showcase-paper: oklch(0.985 0.004 250);
+  --showcase-ink: oklch(0.23 0.02 250);
+  --showcase-accent: oklch(0.52 0.19 255);
+  --showcase-border: oklch(0.89 0.01 250);
 }
 .landing-page {
-  --background: var(--landing-background);
-  --foreground: var(--landing-foreground);
-  --primary: var(--landing-primary);
-  --card: var(--landing-background);
-  --muted: var(--landing-muted);
-  --border: var(--landing-border);
-  --input: var(--landing-border);
-  --accent: var(--landing-muted);
-  --accent-foreground: var(--landing-foreground);
-  --muted-foreground: oklch(0.5 0.016 160);
   background: var(--background);
   color: var(--foreground);
 }
@@ -220,7 +215,7 @@
 .cursor-1 .cursor-click { animation-delay: -1s; }.cursor-2 .cursor-click { animation-delay: -2s; }
 @keyframes cursor-click { 0%, 65% { transform: scale(0.2); opacity: 0; } 70% { opacity: 0.65; } 100% { transform: scale(1.6); opacity: 0; } }
 .piece-0 { --piece-reveal: var(--reveal-0); }.piece-1 { --piece-reveal: var(--reveal-1); }.piece-2 { --piece-reveal: var(--reveal-2); }.piece-3 { --piece-reveal: var(--reveal-3); }.piece-4 { --piece-reveal: var(--reveal-4); }
-.sample-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 9px; padding-bottom: 16px; border-bottom: 1px solid var(--landing-border); }
+.sample-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 9px; padding-bottom: 16px; border-bottom: 1px solid var(--showcase-border); }
 .sample-heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 22px 0; }
 .sample-heading h2 { font-size: 38px; line-height: 1.12; font-weight: 600; }
 .sample-heading p { font-size: 11px; line-height: 1.6; }
@@ -230,7 +225,7 @@
 .sample-image > span { position: absolute; bottom: 12px; left: 12px; font-size: 8px; padding: 5px 8px; background: var(--showcase-paper); }
 .sample-details { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 10px; padding: 18px 0; }
 .sample-details > :first-child { font-weight: 600; }.sample-details > :nth-child(2) { font-size: 9px; }
-.sample-footer { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--landing-border); padding-top: 12px; font-size: 8px; }
+.sample-footer { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--showcase-border); padding-top: 12px; font-size: 8px; }
 .assembly-cursor { position: absolute; pointer-events: none; z-index: 5; color: var(--cursor-color); top: var(--cursor-y, 30%); left: var(--cursor-x, 20%); }
 .assembly-cursor svg { width: 24px; height: 24px; fill: var(--cursor-color); stroke: var(--card); stroke-width: 1.5; }
 .assembly-cursor > span { display: block; margin: -2px 0 0 18px; border-radius: 3px; padding: 4px 8px; font-size: 10px; color: var(--primary-foreground); background: var(--cursor-color); }
@@ -263,11 +258,11 @@
 }
 .landing-templates { background: var(--muted); }
 .landing-invitation {
-  --foreground: var(--landing-background);
-  --muted-foreground: var(--landing-border);
-  --primary: var(--landing-background);
-  --primary-foreground: var(--landing-foreground);
-  background: var(--landing-foreground);
+  --foreground: var(--brand-foreground);
+  --muted-foreground: var(--brand-muted);
+  --primary: var(--brand-foreground);
+  --primary-foreground: var(--brand-surface);
+  background: var(--brand-surface);
   color: var(--foreground);
 }
 .landing-cursor { animation: landing-drift 7s ease-in-out infinite alternate; }
