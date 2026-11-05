@@ -27,12 +27,12 @@ function About() {
     <div className="min-h-screen">
       <SiteNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">About</p>
-        <h1 className="text-5xl leading-tight">Websites are team work. Tools should be too.</h1>
+        <p className="mb-3 text-xs font-semibold uppercase text-primary">About</p>
+        <h1 className="text-4xl font-semibold leading-tight sm:text-5xl">Websites are team work. Tools should be too.</h1>
         <p className="mt-6 text-lg text-muted-foreground">WebCraft started from a simple frustration: waiting for someone else to close the page before you could change it. We built a visual builder where designers, developers and writers work side by side — on the same canvas, in real time.</p>
         <div className="mt-12 grid gap-6 sm:grid-cols-3">
           {POINTS.map(([t, d]) => (
-            <div key={t} className="rounded-lg border p-5"><h3 className="text-lg">{t}</h3><p className="mt-2 text-sm text-muted-foreground">{d}</p></div>
+            <div key={t} className="rounded-lg border bg-card p-5"><h3 className="text-lg font-semibold">{t}</h3><p className="mt-2 text-sm text-muted-foreground">{d}</p></div>
           ))}
         </div>
         <Button asChild size="lg" className="mt-12"><Link to="/auth">Start building</Link></Button>

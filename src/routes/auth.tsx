@@ -6,6 +6,8 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Layers } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -69,18 +71,20 @@ function AuthPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-ink p-12 text-paper lg:flex">
-        <Link to="/" className="font-display text-2xl">WebCraft</Link>
+    <div className="relative grid min-h-dvh bg-background lg:grid-cols-2">
+      <div className="absolute right-4 top-4"><ThemeToggle/></div>
+      <div className="hidden flex-col justify-between bg-brand-surface p-12 text-brand-foreground lg:flex">
+        <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold"><Layers className="size-5"/>WebCraft.</Link>
         <blockquote className="max-w-md">
           <p className="font-display text-4xl leading-tight">“We stopped asking who has the page open.”</p>
-          <footer className="mt-4 text-sm opacity-70">— every team, after week one</footer>
+          <footer className="mt-4 text-sm text-brand-muted">— every team, after week one</footer>
         </blockquote>
-        <p className="text-xs opacity-50">Live edits · element-level locks · clean export</p>
+        <p className="text-xs text-brand-muted">Live edits · element-level locks · clean export</p>
       </div>
-      <div className="flex items-center justify-center p-6">
+      <div className="flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm animate-rise">
-          <h1 className="text-4xl">{mode === "signin" ? "Welcome back" : "Start building"}</h1>
+          <Link to="/" className="mb-8 flex items-center gap-2 font-display text-xl font-semibold lg:hidden"><Layers className="size-5 text-primary"/>WebCraft<span className="-ml-2 text-primary">.</span></Link>
+          <h1 className="text-4xl font-semibold">{mode === "signin" ? "Welcome back" : "Start building"}</h1>
           <p className="mt-2 text-muted-foreground">
             {mode === "signin" ? "Sign in to your projects." : "Create an account — it takes a moment."}
           </p>
@@ -113,12 +117,12 @@ function AuthPage() {
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
-          <button
-            className="mt-6 text-sm text-muted-foreground underline-offset-4 hover:underline"
+          <Button variant="link"
+            className="mt-6 h-auto whitespace-normal px-0 text-sm"
             onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
           >
             {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
-          </button>
+          </Button>
           <div className="mt-4 flex gap-4 text-xs text-muted-foreground">
             <Link to="/about" className="hover:underline">About</Link>
             <Link to="/terms" className="hover:underline">Terms & Conditions</Link>

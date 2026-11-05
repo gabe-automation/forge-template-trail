@@ -1,7 +1,7 @@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FolderOpen, LayoutTemplate, LogOut, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowUpRight, FolderOpen, Layers, LayoutTemplate, LogOut, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SITE_TEMPLATES, templateViews, templatePageCount, type SiteTemplate } from "@/lib/siteTemplates";
@@ -14,7 +14,7 @@ export function WorkspaceShell({ children, section, onSection, signedIn = false,
   return <div className="min-h-dvh bg-background lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
     <aside className="border-b bg-sidebar lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:border-b-0 lg:border-r">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-5 lg:block lg:p-4">
-        <Link to="/" className="font-display text-xl font-bold">WebCraft<span className="text-primary">.</span></Link>
+        <Link to="/" className="flex items-center gap-2 font-display text-xl font-semibold"><Layers className="size-5 text-primary"/>WebCraft<span className="-ml-2 text-primary">.</span></Link>
         <nav aria-label="Workspace" className="flex gap-1 lg:mt-4 lg:flex-col">
           {[{ name: "Projects", icon: FolderOpen }, { name: "Templates", icon: LayoutTemplate }, ...(signedIn ? [{ name: "Trash", icon: Trash2 }] : [])].map(({ name, icon: Icon }) =>
             <Button key={name} variant="ghost" aria-pressed={section === name} onClick={() => onSection(name)}

@@ -12,17 +12,17 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
-- [ ] Unify WebCraft’s blue visual identity across public pages, account pages, workspace, and builder; check both themes and mobile layouts.
+- [x] Unify WebCraft’s blue visual identity across public pages, account pages, workspace, and builder; verified both themes, desktop/tablet/phone layouts, signed-in project dialog, and existing builder rendering.
 - [x] Correct shared device proportions in templates, canvas, and exported sites; verified viewport fitting at 375px, 700px, and 1280px.
 - [x] Add project trash, restoration, and confirmed permanent removal with owner protection.
-- [ ] Verify trash/restore/delete in signed-in workspace — blocked: no requesting-user account session; please sign in to preview.
+- [ ] Verify trash/restore/delete in signed-in workspace — account access is now available; destructive lifecycle checks remain outside the design-consistency task.
 - [x] Swap builder panels and slim the header.
 - [x] Add moldable freeform shape and border controls.
-- [ ] Verify signed-in builder panel, selection, and shape flows — blocked: requesting user has no matching account session; fixes and unit checks implemented, mobile remains read-only.
+- [ ] Verify signed-in builder panel, selection, and shape flows — rendering checked with account access; editing and shape manipulation remain outside the design-consistency task.
 - [x] Add and verify scroll-driven landing-page collaborators assembling a website on desktop and mobile, including reduced motion.
 - [x] Make mobile read-only for every role, retaining tablet and desktop editing.
 - [x] Reorganize header and panels for desktop, tablet, and phone editing.
 - [x] Make compound block content independently editable and support grouping/ungrouping.
 - [x] Move selective locks to code peek and retain automatic collaboration locks.
 - [x] Add portable chart/store code integration points and unit-test exported behavior.
-- [ ] Verify signed-in editor flows at desktop/tablet/phone sizes — blocked: no matching account session; user must sign in to preview.
+- [ ] Verify signed-in editor flows at desktop/tablet/phone sizes — rendering checked at all three sizes; full interaction checks remain outside the design-consistency task.

@@ -31,8 +31,8 @@ function Terms() {
     <div className="min-h-screen">
       <SiteNav />
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Legal</p>
-        <h1 className="text-5xl">Terms & Conditions</h1>
+        <p className="mb-3 text-xs font-semibold uppercase text-primary">Legal</p>
+        <h1 className="text-4xl font-semibold sm:text-5xl">Terms & Conditions</h1>
         <p className="mt-4 text-sm text-muted-foreground">Last updated: October 2026</p>
         <div className="mt-10 space-y-8">
           {SECTIONS.map(([t, d]) => (

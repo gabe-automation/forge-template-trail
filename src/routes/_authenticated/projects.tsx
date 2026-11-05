@@ -118,10 +118,10 @@ function Projects() {
       : <>
         {isLoading && <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-56 animate-pulse rounded-lg bg-muted"/>)}</div>}
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {!readOnly && !isLoading && section !== "Trash" && <button type="button" onClick={() => { setTpl(""); setCreating(true); }} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card text-left transition hover:ring-2 hover:ring-primary">
+          {!readOnly && !isLoading && section !== "Trash" && <Button variant="ghost" type="button" onClick={() => { setTpl(""); setCreating(true); }} className="group flex h-auto min-w-0 flex-col items-stretch gap-0 overflow-hidden rounded-lg border bg-card p-0 text-left whitespace-normal transition hover:ring-2 hover:ring-primary">
             <span className="grid h-[180px] place-items-center bg-muted"><span className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground"><Plus className="size-6"/></span></span>
             <span className="block p-3"><span className="block text-sm font-medium">New design file</span><span className="text-xs text-muted-foreground">Blank or from a template</span></span>
-          </button>}
+          </Button>}
           {filtered.map((p) => <div key={p.id} className="group flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition hover:ring-2 hover:ring-primary"><Link to="/p/$projectId" params={{ projectId: p.id }}>
             <div className="h-[180px] overflow-hidden bg-muted"><SitePreview nodes={thumbs?.[p.id]?.nodes ?? []} theme={thumbs?.[p.id]?.theme ?? DEFAULT_THEME} height={180}/></div>
             <div className="flex min-w-0 items-center gap-2 border-t p-3"><span className="grid size-6 shrink-0 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground">{p.name.slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{p.name}</span><span className="block text-xs capitalize text-muted-foreground">{p.role} · {new Date(p.created_at).toLocaleDateString()}</span></span><ArrowUpRight className="ml-auto size-4 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100"/></div>
@@ -130,7 +130,7 @@ function Projects() {
         {!isLoading && filtered.length === 0 && (section === "Trash" ? <p className="py-12 text-muted-foreground">Trash is empty.</p> : <div className="mt-8"><h2 className="mb-6 text-xl font-semibold">Start from a template</h2><TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/></div>)}
       </>}
     <Dialog open={creating && !readOnly} onOpenChange={setCreating}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-2xl sm:max-w-3xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-lg sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-xl">Start a new project</DialogTitle>
           <DialogDescription>Pick a starting point — templates arrive as complete multi-page websites you can reshape block by block.</DialogDescription>
@@ -147,8 +147,8 @@ function Projects() {
                   const isTpl = "blocks" in t && (t as SiteTemplate).blocks.length > 0;
                   const count = isTpl ? templatePageCount(t as SiteTemplate) : 1;
                   return (
-                    <button key={t.id} type="button" aria-pressed={sel} onClick={() => setTpl(t.id)}
-                      className={`group relative overflow-hidden rounded-xl border bg-card text-left transition hover:shadow-lift ${sel ? "border-primary ring-2 ring-primary/40" : "hover:border-primary/50"}`}>
+                    <Button variant="ghost" key={t.id} type="button" aria-pressed={sel} onClick={() => setTpl(t.id)}
+                      className={`group relative block h-auto overflow-hidden rounded-lg border bg-card p-0 text-left whitespace-normal transition hover:shadow-lift ${sel ? "border-primary ring-2 ring-primary/40" : "hover:border-primary/50"}`}>
                       {isTpl
                         ? <SitePreview nodes={templateViews(t as SiteTemplate)} theme={t.theme} height={140} className="w-full border-b" />
                         : <div className="grid h-[140px] place-items-center border-b bg-dotgrid text-xs text-muted-foreground">Empty page</div>}
@@ -157,15 +157,15 @@ function Projects() {
                         <span className="mt-1 line-clamp-2 block text-[11px] leading-snug text-muted-foreground">{t.description}</span>
                         {sel && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow"><Check className="size-3.5" /></span>}
                       </span>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
-              <aside className="hidden flex-col gap-3 self-start rounded-xl border bg-muted/40 p-4 lg:flex">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your choice</p>
+              <aside className="hidden flex-col gap-3 self-start border-l pl-4 lg:flex">
+                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Your choice</p>
                 <p className="text-sm font-medium">{selected?.name ?? "Blank canvas"}</p>
                 <p className="text-xs leading-relaxed text-muted-foreground">{selected?.description ?? "Begin with an empty page and add blocks as you go."}</p>
-                <p className="mt-auto rounded-lg bg-background p-3 text-xs leading-relaxed text-muted-foreground">
+                <p className="mt-auto border-t pt-3 text-xs leading-relaxed text-muted-foreground">
                   You'll land straight in the editor{selected ? <> with <strong className="text-foreground">{templatePageCount(selected)} page{templatePageCount(selected) > 1 ? "s" : ""}</strong> already set up</> : ""} — theme, fonts and photos included.
                 </p>
               </aside>
