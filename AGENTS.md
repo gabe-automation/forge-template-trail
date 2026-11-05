@@ -18,3 +18,4 @@
 - Base built-in website content responsiveness on the named page container; preserve saved breakpoint rectangles and fit exports uniformly to narrower viewports.
 - Store project trash state on projects.deleted_at, protect transitions with an owner-checking database trigger, and require confirmation before irreversible cascade deletion.
 - Use shared semantic theme tokens for all WebCraft app chrome, including public pages; isolate sample website colors so changing the app theme never recolors user content.
+- Keep sign-in eligibility in the shared signInAccess helper so provider consent rules are independently testable.
