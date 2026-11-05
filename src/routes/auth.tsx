@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Layers } from "lucide-react";
+import { canStartSignIn } from "@/lib/signInAccess";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -88,7 +89,7 @@ function AuthPage() {
           <p className="mt-2 text-muted-foreground">
             {mode === "signin" ? "Sign in to your projects." : "Create an account — it takes a moment."}
           </p>
-          <Button variant="outline" className="mt-8 w-full" onClick={google} disabled={!agreed}>
+          <Button variant="outline" className="mt-8 w-full" onClick={google} disabled={!canStartSignIn("google", agreed, busy)}>
             Continue with Google
           </Button>
           <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
@@ -113,7 +114,7 @@ function AuthPage() {
               <input type="checkbox" className="mt-1 accent-primary" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} required />
               <span>I agree to the <Link to="/terms" target="_blank" className="text-foreground underline">Terms & Conditions</Link> and have read <Link to="/about" target="_blank" className="text-foreground underline">About WebCraft</Link>.</span>
             </label>
-            <Button type="submit" className="w-full" disabled={busy || !agreed}>
+            <Button type="submit" className="w-full" disabled={!canStartSignIn("email", agreed, busy)}>
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>

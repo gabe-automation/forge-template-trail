@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WorkspaceShell, TemplateGallery } from "@/components/WorkspaceGallery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowUpRight, Check, Plus, Trash2, RotateCcw } from "lucide-react";
+import { ArrowUpRight, Check, Plus, Trash2, RotateCcw, File, LayoutTemplate } from "lucide-react";
 import { useDeviceAccess } from "@/hooks/use-device-access";
 import { canManageProject, inProjectSection } from "@/lib/projectTrash";
 
@@ -130,51 +130,48 @@ function Projects() {
         {!isLoading && filtered.length === 0 && (section === "Trash" ? <p className="py-12 text-muted-foreground">Trash is empty.</p> : <div className="mt-8"><h2 className="mb-6 text-xl font-semibold">Start from a template</h2><TemplateGallery readOnly={readOnly} search={search} onPick={(t) => { if (!readOnly) { setTpl(t.id); setCreating(true); } }}/></div>)}
       </>}
     <Dialog open={creating && !readOnly} onOpenChange={setCreating}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-lg sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Start a new project</DialogTitle>
-          <DialogDescription>Pick a starting point — templates arrive as complete multi-page websites you can reshape block by block.</DialogDescription>
+      <DialogContent className="grid max-h-[90dvh] w-[calc(100%-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-lg p-0 shadow-lift sm:max-w-[960px]">
+        <DialogHeader className="border-b px-5 py-5 text-left sm:px-7 sm:py-6">
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-primary"><LayoutTemplate className="size-4"/>NEW PROJECT</div>
+          <DialogTitle className="text-2xl leading-tight">Start with a spark.</DialogTitle>
+          <DialogDescription className="pr-5">A blank canvas or a head start. Make it yours.</DialogDescription>
         </DialogHeader>
         {(() => {
           const blank = { id: "", name: "Blank canvas", description: "One empty page — start from scratch and drop blocks in as you go.", theme: DEFAULT_THEME };
           const selected = SITE_TEMPLATES.find((t) => t.id === tpl);
           const choices: (typeof blank | SiteTemplate)[] = [blank, ...SITE_TEMPLATES];
           return (
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_230px]">
-              <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="min-h-0 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
+              <div className="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {choices.map((t) => {
                   const sel = tpl === t.id;
                   const isTpl = "blocks" in t && (t as SiteTemplate).blocks.length > 0;
                   const count = isTpl ? templatePageCount(t as SiteTemplate) : 1;
                   return (
-                    <Button variant="ghost" key={t.id} type="button" aria-pressed={sel} onClick={() => setTpl(t.id)}
-                      className={`group relative block h-auto overflow-hidden rounded-lg border bg-card p-0 text-left whitespace-normal transition hover:shadow-lift ${sel ? "border-primary ring-2 ring-primary/40" : "hover:border-primary/50"}`}>
-                      {isTpl
-                        ? <SitePreview nodes={templateViews(t as SiteTemplate)} theme={t.theme} height={140} className="w-full border-b" />
-                        : <div className="grid h-[140px] place-items-center border-b bg-dotgrid text-xs text-muted-foreground">Empty page</div>}
-                      <span className="relative block p-3">
-                        <span className="flex items-start justify-between gap-2"><span className="line-clamp-2 block text-sm font-medium leading-snug">{t.name}</span><span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{count} page{count > 1 ? "s" : ""}</span></span>
-                        <span className="mt-1 line-clamp-2 block text-[11px] leading-snug text-muted-foreground">{t.description}</span>
-                        {sel && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow"><Check className="size-3.5" /></span>}
+                    <Button variant="ghost" key={t.id} type="button" aria-label={`Select ${t.name}`} aria-pressed={sel} onClick={() => setTpl(t.id)}
+                      className={`group relative flex h-full min-w-0 flex-col items-stretch justify-start gap-0 overflow-hidden rounded-lg border bg-card p-0 text-left whitespace-normal transition hover:shadow-soft ${sel ? "border-primary ring-2 ring-primary/20" : "hover:border-primary/50"}`}>
+                      <span className="relative block h-40 overflow-hidden border-b bg-muted">
+                        {isTpl
+                          ? <SitePreview nodes={templateViews(t as SiteTemplate)} theme={t.theme} height={160} className="w-full" />
+                          : <span className="grid h-full place-items-center bg-dotgrid"><span className="flex flex-col items-center gap-2"><File className="size-7 text-muted-foreground"/><span className="text-xs text-muted-foreground">Your next idea</span></span></span>}
+                        <span className="absolute bottom-2 left-2 rounded bg-card px-2 py-1 text-[10px] font-medium text-card-foreground shadow-soft">{count} page{count > 1 ? "s" : ""}</span>
+                        {sel && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-soft"><Check className="size-3.5" /></span>}
+                      </span>
+                      <span className="block flex-1 p-4">
+                        <span className="block text-sm font-semibold leading-snug">{t.name}</span>
+                        <span className="mt-2 line-clamp-2 block min-h-8 text-xs font-normal leading-relaxed text-muted-foreground">{t.description}</span>
                       </span>
                     </Button>
                   );
                 })}
               </div>
-              <aside className="hidden flex-col gap-3 self-start border-l pl-4 lg:flex">
-                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Your choice</p>
-                <p className="text-sm font-medium">{selected?.name ?? "Blank canvas"}</p>
-                <p className="text-xs leading-relaxed text-muted-foreground">{selected?.description ?? "Begin with an empty page and add blocks as you go."}</p>
-                <p className="mt-auto border-t pt-3 text-xs leading-relaxed text-muted-foreground">
-                  You'll land straight in the editor{selected ? <> with <strong className="text-foreground">{templatePageCount(selected)} page{templatePageCount(selected) > 1 ? "s" : ""}</strong> already set up</> : ""} — theme, fonts and photos included.
-                </p>
-              </aside>
+              <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground"><Check className="size-3.5 shrink-0 text-primary"/><span><strong className="font-medium text-foreground">{selected?.name ?? "Blank canvas"}</strong> selected · {selected ? `${templatePageCount(selected)} pages` : "1 page"}</span></p>
             </div>
           );
         })()}
-        <form onSubmit={create} className="sticky bottom-0 -mx-6 -mb-6 flex flex-col gap-2 border-t bg-card/95 px-6 py-3 backdrop-blur sm:flex-row">
-          <Input aria-label="Project name" required autoFocus placeholder="Name your project — e.g. Studio redesign" value={name} onChange={(e) => setName(e.target.value)} className="flex-1" />
-          <Button type="submit" disabled={busy || !name.trim()} className="sm:w-44">{busy ? "Creating…" : "Create project"}</Button>
+        <form onSubmit={create} className="flex flex-col gap-3 border-t bg-card px-5 py-4 sm:flex-row sm:items-end sm:px-7">
+          <label className="min-w-0 flex-1 space-y-2"><span className="text-xs font-medium">Project name</span><Input aria-label="Project name" required autoFocus placeholder="e.g. Studio redesign" value={name} onChange={(e) => setName(e.target.value)} className="h-10" /></label>
+          <Button type="submit" disabled={busy || !name.trim()} className="h-10 sm:w-40">{busy ? "Creating…" : <>Create project<ArrowUpRight className="size-4"/></>}</Button>
         </form>
       </DialogContent></Dialog>
   </WorkspaceShell>;
