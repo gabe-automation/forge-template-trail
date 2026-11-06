@@ -12,6 +12,7 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
+- [ ] Move bounded resizing to the left Properties panel and restore fixed right-panel sizing.
 - [x] Add right-panel resizing bounded to 200–320px, remove duplicate chat/new-page/whiteboard shortcuts, and replace grouping checkboxes with modifier-click layer selection; focused tests and signed-in desktop/tablet checks passed.
 - [x] Refine new-project picker proportions, selection indicators, and tablet layout; verify signed-in selection and name entry, retain phone read-only access, and enable Google sign-in without the terms checkbox (focused tests passed).
 - [x] Unify WebCraft’s blue visual identity across public pages, account pages, workspace, and builder; verified both themes, desktop/tablet/phone layouts, signed-in project dialog, and existing builder rendering.
