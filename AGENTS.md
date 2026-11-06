@@ -19,4 +19,4 @@
 - Store project trash state on projects.deleted_at, protect transitions with an owner-checking database trigger, and require confirmation before irreversible cascade deletion.
 - Use shared semantic theme tokens for all WebCraft app chrome, including public pages; isolate sample website colors so changing the app theme never recolors user content.
 - Keep sign-in eligibility in the shared signInAccess helper so provider consent rules are independently testable.
-- Keep right-panel resizing local to ResizableAssetsPanel with bounds from panelSizing; it changes editor chrome only, never saved website geometry.
+- Keep left Properties panel resizing local to ResizablePropertiesPanel with bounds from panelSizing; the right panel stays fixed and resizing never changes saved website geometry.

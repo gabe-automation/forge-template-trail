@@ -44,7 +44,7 @@ import { Rocket, Upload } from "lucide-react";
 import { ContextMenuOverlay, ZoomHud, LayersTree, ZOOM_MIN, ZOOM_MAX, type MenuItem } from "@/components/editor/CanvasChrome";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDeviceAccess } from "@/hooks/use-device-access";
-import { ResizableAssetsPanel } from "@/components/editor/ResizableAssetsPanel";
+import { ResizablePropertiesPanel } from "@/components/editor/ResizablePropertiesPanel";
 
 export const Route = createFileRoute("/_authenticated/p/$projectId")({
   head: () => ({
@@ -777,7 +777,7 @@ function EditorPage() {
         {(assetsOpen || panelOpen) && <div className="fixed inset-x-0 bottom-0 top-[5.5rem] z-30 bg-background/60 xl:hidden" onClick={() => { setAssetsOpen(false); setPanelOpen(false); }} />}
         {/* Settings panel (left) */}
         {page?.kind !== "chat" && (
-        <aside aria-label="Properties" className={`${panelOpen ? "fixed bottom-0 left-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-first w-[min(20rem,92vw)] shrink-0 flex-col border-r bg-card xl:static xl:flex xl:w-64 xl:shadow-none`}>
+        <ResizablePropertiesPanel className={`${panelOpen ? "fixed bottom-0 left-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-first shrink-0 flex-col border-r bg-card xl:relative xl:inset-auto xl:flex xl:shadow-none`}>
           <div className="flex items-center justify-end px-2 pt-2 xl:hidden"><Button size="icon" variant="ghost" className="size-7" onClick={() => setPanelOpen(false)} aria-label="Close panel"><X className="size-4" /></Button></div>
           <Tabs defaultValue="inspect" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-2 grid grid-cols-4">
@@ -905,10 +905,10 @@ function EditorPage() {
               />
             </TabsContent>
           </Tabs>
-        </aside>
+        </ResizablePropertiesPanel>
         )}
         {/* Pages + blocks (right) */}
-        <ResizableAssetsPanel className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last shrink-0 flex-col border-l bg-sidebar lg:relative lg:inset-auto lg:flex lg:shadow-none`}>
+        <aside aria-label="Pages layers and assets" className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last w-[min(18rem,88vw)] shrink-0 flex-col overflow-y-auto border-l bg-sidebar p-2 lg:static lg:flex lg:w-52 lg:shadow-none xl:w-56`}>
           <div className="flex justify-end lg:hidden"><Button size="icon" variant="ghost" aria-label="Close assets panel" onClick={() => setAssetsOpen(false)}><X className="size-4" /></Button></div>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
@@ -973,7 +973,7 @@ function EditorPage() {
 
             </>
           )}
-        </ResizableAssetsPanel>
+        </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Mobile page switcher (sidebars are hidden on small screens) */}
