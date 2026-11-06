@@ -12,7 +12,7 @@ Import complete: code moved into /dev-server, Lovable Cloud enabled (email + Goo
 Tests: `src/test/templates.test.ts` (multi-page templates + blockSnippet/export consistency) — passing. Verified in preview: signup → new project from template (3 pages) → code peek → preview popup images → publish → published home + inner page render with images.
 
 ## Builder refinements
-- [ ] Refine new-project picker proportions, selection indicators, and mobile layout; enable Google sign-in without the terms checkbox.
+- [x] Refine new-project picker proportions, selection indicators, and tablet layout; verify signed-in selection and name entry, retain phone read-only access, and enable Google sign-in without the terms checkbox (focused tests passed).
 - [x] Unify WebCraft’s blue visual identity across public pages, account pages, workspace, and builder; verified both themes, desktop/tablet/phone layouts, signed-in project dialog, and existing builder rendering.
 - [x] Correct shared device proportions in templates, canvas, and exported sites; verified viewport fitting at 375px, 700px, and 1280px.
 - [x] Add project trash, restoration, and confirmed permanent removal with owner protection.
