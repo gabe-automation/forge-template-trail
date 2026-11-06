@@ -908,7 +908,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <ResizableAssetsPanel className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last shrink-0 flex-col border-l bg-sidebar lg:static lg:flex lg:shadow-none`}>
+        <ResizableAssetsPanel className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last shrink-0 flex-col border-l bg-sidebar lg:relative lg:inset-auto lg:flex lg:shadow-none`}>
           <div className="flex justify-end lg:hidden"><Button size="icon" variant="ghost" aria-label="Close assets panel" onClick={() => setAssetsOpen(false)}><X className="size-4" /></Button></div>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
