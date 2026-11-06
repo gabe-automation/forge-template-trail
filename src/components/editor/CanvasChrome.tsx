@@ -78,8 +78,7 @@ export function LayersTree({ views, selected, multiSelected = [], onMultiSelect,
           {ch.length ? <button type="button" aria-label={open ? "Collapse" : "Expand"} className="shrink-0" onClick={() => setClosed((c) => ({ ...c, [v.id]: open }))}>
             {open ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
           </button> : <span className="w-3 shrink-0" />}
-          {onMultiSelect && <input type="checkbox" className="size-3 shrink-0 accent-primary" aria-label={`Select ${BLOCKS[v.type]?.name} for grouping`} checked={multiSelected.includes(v.id)} onChange={() => onMultiSelect(v.id)} />}
-          <Button variant="ghost" size="sm" onClick={() => onSelect(v.id)} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 text-xs">
+          <Button variant="ghost" size="sm" aria-pressed={selected === v.id || multiSelected.includes(v.id)} onClick={e => { if (onMultiSelect && (e.shiftKey || e.ctrlKey || e.metaKey)) onMultiSelect(v.id); else onSelect(v.id); }} className="h-auto min-h-7 min-w-0 flex-1 justify-start gap-1.5 px-1 text-xs">
             <span className="truncate font-medium">{v.attrs["data-group"] === "true" ? "Group" : BLOCKS[v.type]?.name ?? v.type}</span>
             {name && <span className="truncate text-muted-foreground">{name}</span>}
           </Button>
