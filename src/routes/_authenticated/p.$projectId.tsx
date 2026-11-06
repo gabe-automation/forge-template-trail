@@ -44,6 +44,7 @@ import { Rocket, Upload } from "lucide-react";
 import { ContextMenuOverlay, ZoomHud, LayersTree, ZOOM_MIN, ZOOM_MAX, type MenuItem } from "@/components/editor/CanvasChrome";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDeviceAccess } from "@/hooks/use-device-access";
+import { ResizableAssetsPanel } from "@/components/editor/ResizableAssetsPanel";
 
 export const Route = createFileRoute("/_authenticated/p/$projectId")({
   head: () => ({
@@ -722,9 +723,6 @@ function EditorPage() {
             })}
           </div>
         ) : <span className="mx-auto text-sm text-muted-foreground">{page?.title}</span>}
-        <div className="flex items-center gap-1">
-          <Button size="sm" disabled={readOnly && !pages.some((x) => x.kind === "whiteboard")} variant={page?.kind === "whiteboard" ? "secondary" : "ghost"} onClick={() => { const w = pages.find((x) => x.kind === "whiteboard"); if (w) { setPageId(w.id); setChatOpen(false); } else addPage("whiteboard"); }}><PenTool className="size-4" /> <span className="hidden xl:inline">Whiteboard</span></Button>
-        </div>
         {page?.kind === "canvas" && !readOnly && (
           <Button size="sm" variant="outline" onClick={() => setTplOpen(true)}><LayoutTemplate className="size-4" /> <span className="hidden xl:inline">Templates</span></Button>
         )}
@@ -910,7 +908,7 @@ function EditorPage() {
         </aside>
         )}
         {/* Pages + blocks (right) */}
-        <aside aria-label="Pages layers and assets" className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last w-[min(18rem,88vw)] shrink-0 flex-col overflow-y-auto border-l bg-sidebar p-2 lg:static lg:flex lg:w-52 lg:shadow-none xl:w-56`}>
+        <ResizableAssetsPanel className={`${assetsOpen ? "fixed bottom-0 right-0 top-[5.5rem] z-40 flex shadow-lift" : "hidden"} order-last shrink-0 flex-col border-l bg-sidebar lg:static lg:flex lg:shadow-none`}>
           <div className="flex justify-end lg:hidden"><Button size="icon" variant="ghost" aria-label="Close assets panel" onClick={() => setAssetsOpen(false)}><X className="size-4" /></Button></div>
           <div className="mb-1 flex items-center justify-between px-1">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pages</p>
@@ -952,12 +950,6 @@ function EditorPage() {
               );
             })}
           </ul>
-          <Button variant={chatOpen ? "secondary" : "ghost"} size="sm" onClick={() => openChat()} className="mb-3 justify-start"><MessagesSquare className="size-4" /> Team chat</Button>
-          {!readOnly && (
-            <button onClick={() => addPage("canvas")} className="mb-4 flex items-center gap-2 rounded-md border border-dashed px-2 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">
-              <Plus className="size-4" /> New blank page
-            </button>
-          )}
           {page?.kind === "canvas" && (
             <div className="mb-4 border-t pt-3">
               <p className="mb-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Layers</p>
@@ -981,7 +973,7 @@ function EditorPage() {
 
             </>
           )}
-        </aside>
+        </ResizableAssetsPanel>
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* Mobile page switcher (sidebars are hidden on small screens) */}
